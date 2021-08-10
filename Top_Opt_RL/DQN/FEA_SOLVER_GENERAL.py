@@ -4,9 +4,8 @@ Created on Wed Mar  3 15:23:01 2021
 
 @author: nbrow
 """
-
 import numpy as np
-
+import statistics
 #import cupy
 import skimage.measure as measure
 
@@ -200,7 +199,7 @@ def stresses2D(GDof,TotElements,nodeCoor,numberNodes,displacements,UX,UY,materia
                 stress[e,q,:]=np.transpose(np.dot(C,strain))
 
         return(stress)
-def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Direction,BC1,BC2,Stress):
+def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Node2,Loaded_Direction,BC1,BC2,BC3,BC4,Stress):
     'Input Linear Material Properties'
     materials=np.zeros((2,2))
     #Real Material Properties
@@ -233,8 +232,8 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Direction,BC
     conditions of the given problem'''
     
     'BC currently set up to limit displacement on Y-Axis with distributed force on X=Lx' 
-    fixedNodeX=[BC1,BC2]
-    fixedNodeY=[BC1+numberNodes,BC2+numberNodes]
+    fixedNodeX=[BC1,BC2,BC3,BC4]
+    fixedNodeY=[BC1+numberNodes,BC2+numberNodes,BC3+numberNodes,BC4+numberNodes]
  
     prescribedDof=[fixedNodeX+fixedNodeY]
     'Input Force Vectors'
@@ -249,7 +248,8 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Direction,BC
     #|                        |                             |
     #|                        v                             |
     #--------------------------------------------------------
-    force[Loaded_Node]=P 
+    force[Loaded_Node]=P/2
+    force[Loaded_Node2]=P/2
     FS2D=formStiffness2D(GDof,TotElements,numberNodes,elementNodes,nodeCoor,materials,1,1,VoidCheck)                                                         
     stiffness=FS2D[0]
     displacements=solution(GDof,prescribedDof,stiffness,force)
@@ -268,26 +268,38 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Direction,BC
         sigmay=stress[:,:,1]
         tauxy=stress[:,:,2]
     
-        stressx=np.zeros((ElementsX+1,ElementsY+1))
-        stressy=np.zeros((ElementsX+1,ElementsY+1))
-        stressxy=np.zeros((ElementsX+1,ElementsY+1))
+        stressx_node=np.zeros((ElementsX+1,ElementsY+1))
+        stressy_node=np.zeros((ElementsX+1,ElementsY+1))
+        stressxy_node=np.zeros((ElementsX+1,ElementsY+1))
+        stressx_element=np.zeros((ElementsX*ElementsY,1))
+        stressy_element=np.zeros((ElementsX*ElementsY,1))
+        stressxy_element=np.zeros((ElementsX*ElementsY,1))
+    
         #stressmat=np.zeros(numberNodes)
         Count=0
         
         for j in range(0,ElementsY):
             for i in range(0,ElementsX):
                 #Change sigmax to sigmay for different stress distribution
-               stressx[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(sigmax[Count,:],(2,2))
-               stressy[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(sigmay[Count,:],(2,2))
-               stressxy[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(tauxy[Count,:],(2,2))
+               stressx_node[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(sigmax[Count,:],(2,2))
+               stressy_node[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(sigmay[Count,:],(2,2))
+               stressxy_node[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(tauxy[Count,:],(2,2))
                Count=Count+1
+        for ii in range(0,len(stressx_element)):
+            stressx_element[ii]=statistics.mean(sigmax[ii,:])
+            stressy_element[ii]=statistics.mean(sigmay[ii,:])
+            stressxy_element[ii]=statistics.mean(tauxy[ii,:])
+       
+        stressx_element=np.reshape(stressx_element,(ElementsX,ElementsY))
+        stressy_element=np.reshape(stressy_element,(ElementsX,ElementsY))
+        stressxy_element=np.reshape(stressxy_element,(ElementsX,ElementsY))
                
         ''' Calculate the Von Mises Stress'''
-        VonMises=np.sqrt((stressx*stressx)-(stressx*stressy)+(stressy*stressy)+(3*stressxy*stressxy))
-        VonMises_node=VonMises
-        VonMises=VonMises[0:ElementsX,0:ElementsY]
-        VonMises_node_nn=np.reshape(np.transpose(VonMises_node),(((ElementsX+1)*(ElementsY+1),1)))
-        VonMises_nn=np.reshape(np.transpose(VonMises),((ElementsX*ElementsY),1))
+        VonMises_element=np.sqrt((stressx_element*stressx_element)-(stressx_element*stressy_element)+(stressy_element*stressy_element)+(3*stressxy_element*stressxy_element))
+        VonMises_node=np.sqrt((stressx_node*stressx_node)-(stressx_node*stressy_node)+(stressy_node*stressy_node)+(3*stressxy_node*stressxy_node))
+
+        VonMises_node_nn=np.reshape(np.flip(VonMises_node,0),(((ElementsX+1)*(ElementsY+1),1)))
+        VonMises_nn=np.reshape(VonMises_element,((ElementsX*ElementsY),1))
 
         VonMises_node_nn=max(VonMises_node_nn)/VonMises_node_nn
         VonMises_node_nn[VonMises_node_nn>1e4]=0
@@ -302,4 +314,4 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,Loaded_Node,Loaded_Direction,BC
         VonMises=[]
         VonMises_nn=[]
 
-    return(MaxDisplacements,StrainEnergy,VonMises,VonMises_nn,VonMises_node_nn)
+    return(MaxDisplacements,StrainEnergy,VonMises_element,VonMises_nn,VonMises_node_nn)
