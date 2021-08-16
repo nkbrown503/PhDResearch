@@ -160,8 +160,7 @@ if __name__=='__main__':
     Lx=opts.Length_X
     Ly=opts.Length_Y
     n_games = opts.Num_Games
-    #filename_save = 'DDQN_TopOpt_Generalized_CNN_4L_Gen_'+str(Main_EX)+'by'+str(Main_EY)
-    filename_save= 'TestingTesting'
+    filename_save = 'DDQN_TopOpt_Generalized_CNN_4L_Gen_'+str(Main_EX)+'by'+str(Main_EY)
     filename_load = 'DDQN_TopOpt_Generalized_CNN_4L_Gen_5by5'
     
     env = TopOpt_Gen(Lx,Ly,Main_EX,Main_EY)
