@@ -206,7 +206,7 @@ def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Sm
             primer_done=False
             print(np.flip(np.reshape(range(0,(Small_EX)*(Small_EY)),(Small_EX,Small_EY)),0))
             action=int(input('It appears I am stuck, please suggest an element to remove: '))
-            observation_primer_, reward, primer_done, It = env_primer.step(action,observation_primer,Small_EX,Small_EY,Last_Reward)
+            observation_primer_, reward, primer_done, It = env_primer.step(action,observation_primer,Last_Reward)
             observation_primer = observation_primer_
         if load_checkpoint:
             env_primer.render()
