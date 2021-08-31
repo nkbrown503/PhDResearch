@@ -22,25 +22,25 @@ import sys
 from Matrix_Transforms import Mesh_Transform
 opts=parse_opts()
 class TopOpt_Gen(Env):
-    def __init__(self,Lx,Ly,Elements_X,Elements_Y,Vol_Frac):
+    def __init__(self,Lx,Ly,Elements_X,Elements_Y,Vol_Frac,SC):
         #Actons we can take... remove any of the blocks
         self.EX=Elements_X
         self.RS=Reward_Surface()[0]
         self.RV=Reward_Surface()[1]
-        
+        self.SC=SC
         self.Lx=Lx
         self.EY=Elements_Y
         self.Ly=Ly
         self.action_space=Discrete(self.EX*self.EY)
         self.eta=opts.Eta
         self.Vol_Frac=Vol_Frac
-    def step(self,action,observation,Last_Reward,load_checkpoint,PR):
+    def step(self,action,observation,Last_Reward,load_checkpoint,env,PR,FEA_Skip):
         #Apply Action
-            
+        self.Counter+=1    
         # evaluate it on grid
-      
-        rs_place=self.VoidCheck[action]
-        self.VoidCheck[action]=0
+
+        rs_place=self.VoidCheck[int(action)]
+        self.VoidCheck[int(action)]=0
         ElementMat=np.reshape(self.VoidCheck,(self.EX,self.EY))
         SingleCheck=FEA_SOLVER_GENERAL.isolate_largest_group_original(ElementMat)
         It=list(self.VoidCheck).count(0)
@@ -48,17 +48,30 @@ class TopOpt_Gen(Env):
             done=False
             if It>=math.ceil((self.EX*self.EY)*(1-self.Vol_Frac)) and load_checkpoint or It>=math.ceil((self.EX*self.EY)*(1-self.Vol_Frac)) and PR:
                 done=True
-            Run_Results=FEA_SOLVER_GENERAL.FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
-            self.Max_SE_Ep=np.max(Run_Results[1])
+            if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
+                Run_Results=FEA_SOLVER_GENERAL.FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+                self.Max_SE_Ep=np.max(Run_Results[1])
+        
+                if (env.Max_VM/max(list(np.reshape(Run_Results[2],(1,self.EX*self.EY)))[0]))<(1-float(self.SC)):
+
+                    done=True
+                    print('STRESS CONSTRAINT HIT!')
+            else:
+                self.Stress_state=np.reshape(self.Stress_state,(1,self.EX*self.EY))
+                self.Stress_state[0][action]=0
+                self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
+            
             if abs(self.Max_SE_Tot/self.Max_SE_Ep)>=1 or abs(It/(self.EX*self.EY))>=1 or self.Max_SE_Tot==0 or self.Max_SE_Ep==0:
                 reward=-1
                 done=True
             else:
                 reward = self.RS[(int((self.Max_SE_Tot/self.Max_SE_Ep)*1000))-1,int((It/(self.EX*self.EY))*1000)-1]
-                reward2=self.RV[int(1-(np.reshape(self.Stress_state,(self.EX*self.EY,1))[action])*1000)-1]
-                reward=statistics.mean([reward,reward2])
-            self.Stress_state=Run_Results[3]
-            self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
+                if not load_checkpoint:
+                    reward2=self.RV[int(1-(np.reshape(self.Stress_state,(self.EX*self.EY,1))[action])*1000)-1]
+                    reward=statistics.mean([reward,reward2])
+            if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
+                self.Stress_state=Run_Results[3]
+                self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
             self.state=np.zeros((self.EX,self.EY,3))
             self.state[:,:,0]=self.Stress_state
             self.state[:,:,1]=self.BC_state
@@ -77,7 +90,7 @@ class TopOpt_Gen(Env):
             reward=-1
             done=True
             if rs_place==1:
-                self.VoidCheck[action]=1
+                self.VoidCheck[int(action)]=1
             
         reward+=1e-4
         Last_Reward+=1e-4
@@ -107,13 +120,16 @@ class TopOpt_Gen(Env):
         
     def reset(self):
 
-        self.Stress_state =FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)[3]
+        self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+        self.Stress_state=self.Results[3]
+        self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
         #self.Stress_state=list(np.array(self.Stress_state)
         self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
         self.state=np.zeros((self.EX,self.EY,3))
         self.state[:,:,0]=self.Stress_state
         self.state[:,:,1]=self.BC_state
         self.state[:,:,2]=self.LC_state
+        self.Counter=0
 
         return self.state
     def reset_conditions(self):
@@ -162,8 +178,9 @@ class TopOpt_Gen(Env):
             for BCS in range(0,len(self.BC_Elements)):
                 self.BC_state[int(self.BC_Elements[BCS])]=1
             self.BC_state=np.reshape(self.BC_state,(self.EX,self.EY))
-            self.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)[1]))
-
+            self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+            self.Max_SE_Tot=self.Results[1]
+            self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
     def primer_cond(self,EX,EY):
          self.BC=[]
          self.BC=np.append(self.BC,self.BC_Elements)
@@ -176,8 +193,10 @@ class TopOpt_Gen(Env):
          for LCS in range(0,len(self.LC_Elements)):
                 self.LC_state[int(self.LC_Elements[LCS])]=1
          self.LC_state=np.reshape(self.LC_state,(EX,EY))
-         self.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)[1]))
-def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY):
+         self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+         self.Max_SE_Tot=np.max(self.Results[1])
+         self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
+def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY,Time_Trial,FEA_Skip):
     '''This function will deliver the optimal topology of the smaller sized environment.
     This final topology will then be transformed into the equivalent topology at the 
     larger selected size. This larger topology will then be based back to the main function
@@ -208,11 +227,12 @@ def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Sm
     observation_primer=env_primer.reset()
     Last_Reward=0
     while not primer_done:
-        action = agent_primer.choose_action(observation_primer,load_checkpoint,Testing=True)
-        observation_primer_, reward, primer_done, It = env_primer.step(action,observation_primer,Last_Reward,load_checkpoint,PR=True)
+        Testing=True
+        action = agent_primer.choose_action(observation_primer,load_checkpoint,Testing)
+        observation_primer_, reward, primer_done, It = env_primer.step(action,observation_primer,Last_Reward,load_checkpoint,env,FEA_Skip=FEA_Skip,PR=True)
         observation_primer = observation_primer_
         Last_Reward=reward
-        if load_checkpoint:
+        if load_checkpoint and not Time_Trial:
             env_primer.render()
     Last_Reward=0
     if Testing:
@@ -325,7 +345,9 @@ def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR
         env_primer.render()
         env_primer2.render()
     env.render()
-    print('Strain Energy for Final Topology: '+str(round(np.max(FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]),1)))
+    Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+    print('Strain Energy for Final Topology: '+str(round(np.max(Final_Results[1]),1)))
+    print('Maximum VonMises Stress: '+str(round(max(list(np.reshape(Final_Results[2],(1,env.EX*env.EY)))[0]),1)))
     print('Final Volume Fraction: '+str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
     
     print('----------------')
