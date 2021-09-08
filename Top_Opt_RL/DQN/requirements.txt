@@ -4,7 +4,6 @@ tensorflow_probability==0.12.1
 scipy==1.4.1
 scikit_image==0.16.2
 gym==0.18.0
-~umpy==1.18.5
 keract==4.5.0
 tensorflow==2.5.0
 pandas==1.0.1
