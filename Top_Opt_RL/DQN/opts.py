@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 16 10:17:32 2021
-
-@author: nbrow
-"""
 
 
 import argparse 
@@ -114,8 +108,14 @@ def parse_opts():
                     default=0.25,
                     type=float,
                     help='Final Volume Fraction ')
+    
+    parser.add_argument('--P_Norm',
+                    default=10,
+                    type=int,
+                    help='Smoothing Parameter for P-Norm Global Stress calculation')
     args = parser.parse_args()
 
     return args
     
+        
         
