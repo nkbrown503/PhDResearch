@@ -6,8 +6,7 @@ Created on Thu Aug 12 11:42:39 2021
 """
 import FEA_SOLVER_GENERAL
 import numpy as np
-import random
-def LC_Nodes(Load_Element,Load_Direction,Lx,Ly,Elements_X,Elements_Y,Counting,Node_Location):
+def LC_Nodes(Load_Element,Load_Type,Load_Direction,Lx,Ly,Elements_X,Elements_Y,Counting,Node_Location):
     '''Given the loaded element and loading direction, 
     produce the nodes that should be loaded for the FEA. If the user is testing
      and selects an element not on the exterior edges of the shape
@@ -30,48 +29,44 @@ def LC_Nodes(Load_Element,Load_Direction,Lx,Ly,Elements_X,Elements_Y,Counting,No
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[3]
     if Load_Element in Top_List and Load_Element in Right_List:
-        if Load_Direction==1:
+        if Load_Type==1:
             Loaded_Node=Load_Nodes[1]
             Loaded_Node2=Load_Nodes[2]
         else:
             Loaded_Node=Load_Nodes[2]
             Loaded_Node2=Load_Nodes[3]
     if Load_Element in Top_List and Load_Element in Left_List:
-        if Load_Direction==1:
+        if Load_Type==1:
             Loaded_Node=Load_Nodes[0]
             Loaded_Node2=Load_Nodes[3]
         else:
             Loaded_Node=Load_Nodes[2]
             Loaded_Node2=Load_Nodes[3]
     if Load_Element in Bottom_List and Load_Element in Right_List:
-        if Load_Direction==1:
+        if Load_Type==1:
             Loaded_Node=Load_Nodes[1]
             Loaded_Node2=Load_Nodes[2]
         else:
             Loaded_Node=Load_Nodes[0]
             Loaded_Node2=Load_Nodes[1]
     if Load_Element in Bottom_List and Load_Element in Left_List:
-        if Load_Direction==1:
+        if Load_Type==1:
             Loaded_Node=Load_Nodes[0]
             Loaded_Node2=Load_Nodes[3]
         else:
             Loaded_Node=Load_Nodes[0]
             Loaded_Node2=Load_Nodes[1]
     if Load_Element not in Bottom_List and Load_Element not in Top_List and Load_Element not in Right_List and Load_Element not in Left_List:
-        if Node_Location:
-            Dir=int(input('Where would you like the load applied on the element #'+str(Counting)+' (0:Bottom   1:Right  2:Top   3:Left): '))
-        else:
-            Dir=random.randrange(0,4)
-        if Dir==0:
+        if Load_Type==0 and Load_Direction==-1:
             Loaded_Node=Load_Nodes[0]
             Loaded_Node2=Load_Nodes[1]
-        if Dir==1:
+        if Load_Type==1 and Load_Direction==1:
             Loaded_Node=Load_Nodes[1]
             Loaded_Node2=Load_Nodes[2]
-        if Dir==2:
+        if Load_Type==0 and Load_Direction==1:
             Loaded_Node=Load_Nodes[2]
             Loaded_Node2=Load_Nodes[3]
-        if Dir==3:
+        if Load_Type==1 and Load_Direction==-1:
             Loaded_Node=Load_Nodes[3]
             Loaded_Node2=Load_Nodes[0]
     Loaded_Node=int(Loaded_Node)
