@@ -15,16 +15,17 @@ from opts import parse_opts
 import statistics 
 import math
 import copy
+import json
 from Matrix_Transforms import Condition_Transform
 import matplotlib.pyplot as plt
 import random
 import sys
-from Matrix_Transforms import Mesh_Transform
 opts=parse_opts()
 class TopOpt_Gen(Env):
     def __init__(self,Lx,Ly,Elements_X,Elements_Y,Vol_Frac,SC):
         #Actons we can take... remove any of the blocks
         self.EX=Elements_X
+        self.p=opts.P_Norm
         self.RS=Reward_Surface()[0]
         self.RV=Reward_Surface()[1]
         self.SC=SC
@@ -51,8 +52,7 @@ class TopOpt_Gen(Env):
             if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
                 Run_Results=FEA_SOLVER_GENERAL.FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
                 self.Max_SE_Ep=np.max(Run_Results[1])
-        
-                if (env.Max_VM/max(list(np.reshape(Run_Results[2],(1,self.EX*self.EY)))[0]))<(1-float(self.SC)):
+                if (env.P_Norm/(sum(sum([number**self.p for number in np.reshape(Run_Results[2],(1,self.EX*self.EY))]))**(1/self.p)))<(1-float(self.SC)):
 
                     done=True
                     print('STRESS CONSTRAINT HIT!')
@@ -122,8 +122,7 @@ class TopOpt_Gen(Env):
 
         self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
         self.Stress_state=self.Results[3]
-        self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
-        #self.Stress_state=list(np.array(self.Stress_state)
+        self.P_Norm=sum(sum([number**self.p for number in np.reshape(self.Results[2],(1,self.EX*self.EY))]))**(1/self.p)        #self.Stress_state=list(np.array(self.Stress_state)
         self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
         self.state=np.zeros((self.EX,self.EY,3))
         self.state[:,:,0]=self.Stress_state
@@ -166,8 +165,8 @@ class TopOpt_Gen(Env):
                 self.LC_state[int(self.LC_Elements[LCS])]=1
             self.LC_state=np.reshape(self.LC_state,(self.EX,self.EY))
             self.Load_Types=np.append(self.Load_Types,random.choice([0,1]))
-            self.LC_Nodes=np.append(self.LC_Nodes,LC_Nodes(int(self.LC_Elements[0]),self.Load_Types,self.Lx,self.Ly,self.EX,self.EY,LCS,Node_Location=False)[0])
-            self.LC_Nodes=np.append(self.LC_Nodes,LC_Nodes(int(self.LC_Elements[0]),self.Load_Types,self.Lx,self.Ly,self.EX,self.EY,LCS,Node_Location=False)[1])
+            self.LC_Nodes=np.append(self.LC_Nodes,LC_Nodes(int(self.LC_Elements[0]),self.Load_Types,self.Load_Directions,self.Lx,self.Ly,self.EX,self.EY,LCS,Node_Location=False)[0])
+            self.LC_Nodes=np.append(self.LC_Nodes,LC_Nodes(int(self.LC_Elements[0]),self.Load_Types,self.Load_Directions,self.Lx,self.Ly,self.EX,self.EY,LCS,Node_Location=False)[1])
             if self.Load_Types[0]==0: #Load will be applied vertically
                 self.LC_Nodes[0]+=((self.EX+1)*(self.EY+1))
                 self.LC_Nodes[1]+=((self.EX+1)*(self.EY+1))
@@ -180,7 +179,6 @@ class TopOpt_Gen(Env):
             self.BC_state=np.reshape(self.BC_state,(self.EX,self.EY))
             self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
             self.Max_SE_Tot=self.Results[1]
-            self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
     def primer_cond(self,EX,EY):
          self.BC=[]
          self.BC=np.append(self.BC,self.BC_Elements)
@@ -195,8 +193,8 @@ class TopOpt_Gen(Env):
          self.LC_state=np.reshape(self.LC_state,(EX,EY))
          self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
          self.Max_SE_Tot=np.max(self.Results[1])
-         self.Max_VM=max(list(np.reshape(self.Results[2],(1,self.EX*self.EY)))[0])
-def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY,Time_Trial,FEA_Skip):
+
+def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY,Time_Trial,From_App,FEA_Skip):
     '''This function will deliver the optimal topology of the smaller sized environment.
     This final topology will then be transformed into the equivalent topology at the 
     larger selected size. This larger topology will then be based back to the main function
@@ -235,9 +233,69 @@ def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Sm
         if load_checkpoint and not Time_Trial:
             env_primer.render()
     Last_Reward=0
-    if Testing:
+    if Testing and not From_App:
         env_primer.render()
+def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
+    '''To improve the adaptability of this method, a web-app has been developed
+    using Heroku The web-app will provide an interactive environment for the user
+    to select the boundary and loading conditions. The BCs and LCs will be imported as 
+    a .json file and distributed accordingly similar to the User_Input function'''
+    env.BC_Elements=[]
+    env.LC_Elements=[]
+    env.BC_Nodes=[]
+    env.LC_Nodes=[]
+    env.Load_Types=[]
+    env.Load_Directions=[]
 
+    BC=[int(x) for x in User_Conditions['bcs']]
+    Right=[int(x) for x in User_Conditions['rights']]
+    Left=[int(x) for x in User_Conditions['lefts']]
+    #Up=[int(x) for x in User_Conditions['ups']]
+    Down=[int(x) for x in User_Conditions['downs']]
+    env.BC_Elements=np.append(env.BC_Elements,BC)
+
+    env.LC_Elements=np.append(env.LC_Elements,Right).astype('int')
+    env.Load_Types=np.append(env.Load_Types,[1]*len(Right)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[1]*len(Right)).astype('int')
+    
+    env.LC_Elements=np.append(env.LC_Elements,Left).astype('int')
+    env.Load_Types=np.append(env.Load_Types,[1]*len(Left)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Left)).astype('int')
+    
+    #env.LC_Elements=np.append(env.LC_Elements,Up).astype('int')
+    #env.Load_Types=np.append((env.Load_Types,[0]*len(Up))).astype('int')
+    #env.Load_Directions=np.append(env.Load_Directions,[1]*len(Up)).astype('int')
+    
+    env.LC_Elements=np.append(env.LC_Elements,Down).astype('int')
+    env.Load_Types=np.append(env.Load_Types,[0]*len(Down)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Down)).astype('int')
+    for Counting in range(0,len(env.LC_Elements)):
+        if env.Load_Types[Counting]==0:
+            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(Elements_X+1)*(Elements_Y+1))
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(Elements_X+1)*(Elements_Y+1))
+        else:
+            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0])
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1])
+    for Counting in range(0,len(env.BC_Elements)):
+        env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[0])
+        env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[1])
+
+    env.LC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    for LCS in range(0,len(env.LC_Elements)):
+                env.LC_state[int(env.LC_Elements[LCS])]=1
+    env.LC_state=np.reshape(env.LC_state,(Elements_X,Elements_Y))
+    env.BC=[]
+    env.BC=np.append(env.BC,env.BC_Elements)
+    env.BC=np.append(env.BC,env.LC_Elements)
+    env.BC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    for BCS in range(0,len(env.BC_Elements)):
+        env.BC_state[int(env.BC_Elements[BCS])]=1
+    env.BC_state=np.reshape(env.BC_state,(Elements_X,Elements_Y))
+    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    
+    
 def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
     '''When testing a trained agent, the user will be prompted to select
     a single element to act as the loaded element, and two elements to act as the boundary 
@@ -269,7 +327,7 @@ def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
         env.Load_Directions=np.append(env.Load_Directions,int(input('Input -1 for a tensile load or Input 1 for a compressive load for this element: ')))
     for Counting in range(0,LC_Count):
         if env.Load_Types[Counting]==0:
-            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
+            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(Elements_X+1)*(Elements_Y+1))
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(Elements_X+1)*(Elements_Y+1))
         else:
@@ -317,63 +375,76 @@ def Testing_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
     env.BC_state=np.reshape(env.BC_state,(Elements_X,Elements_Y))
     env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
 
-def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR_EY,PR2_EX,PR2_EY,score,Progressive_Refinement,Fixed):
+def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR_EY,PR2_EX,PR2_EY,score,Progressive_Refinement,From_App,Fixed):
     '''Function that outputs the results of a testing trial. The results include
     the score based on the reward function, the final strain energy, and if needed
     the number of arbitrary blocks removed by the shaving algorithm'''
-
-    print('----------------')
-
-    print('The final topology: ')
-    for BC_Count in range(0,len(env.BC_Elements)):
-        print('BC Element #'+str(BC_Count)+': '+str(int(env.BC_Elements[BC_Count])))
-    for LC_Count in range(0,len(env.LC_Elements)):
-        print('LC Element #'+str(LC_Count)+': '+str(int(env.LC_Elements[LC_Count])))
-        if env.Load_Types[LC_Count]==0:
-            Load_Types='Vertical'
-        else:
-            Load_Types='Horizontal'
-        if env.Load_Directions[LC_Count]==-1:
-            Load_Dir='Tensile'
-        else:
-            Load_Dir='Compressive'
-        print('Load Type: '+Load_Dir)
-        print('Load Direction: '+Load_Types)
-  
-
-    if Progressive_Refinement:
-        env_primer.render()
-        env_primer2.render()
-    env.render()
-    Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
-    print('Strain Energy for Final Topology: '+str(round(np.max(Final_Results[1]),1)))
-    print('Maximum VonMises Stress: '+str(round(max(list(np.reshape(Final_Results[2],(1,env.EX*env.EY)))[0]),1)))
-    print('Final Volume Fraction: '+str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
+    if not From_App:
+        print('----------------')
     
-    print('----------------')
-    Mat_Plot=copy.deepcopy(env_primer.VoidCheck)
-    plt.figure(1)
-    for BC_Count in range(0,len(env_primer.BC_Elements)):
-        Mat_Plot[int(env_primer.BC_Elements[BC_Count])]=3
-    for LC_Count in range(0,len(env_primer.LC_Elements)):
-        Mat_Plot[int(env_primer.LC_Elements[LC_Count])]=2
-    plt.subplot(221)
-    plt.imshow(np.flip(np.reshape(Mat_Plot,(PR_EX,PR_EY)),axis=0),cmap='Blues')
-    Mat_Plot=copy.deepcopy(env_primer2.VoidCheck)
-    for BC_Count in range(0,len(env_primer2.BC_Elements)):
-        Mat_Plot[int(env_primer2.BC_Elements[BC_Count])]=3
-    for LC_Count in range(0,len(env_primer2.LC_Elements)):
-        Mat_Plot[int(env_primer2.LC_Elements[LC_Count])]=2
-        plt.subplot(222)
-    plt.imshow(np.flip(np.reshape(Mat_Plot,(PR2_EX,PR2_EY)),axis=0),cmap='Blues')
-    Mat_Plot=copy.deepcopy(env.VoidCheck)
-    for BC_Count in range(0,len(env.BC_Elements)):
-        Mat_Plot[int(env.BC_Elements[BC_Count])]=3
-    for LC_Count in range(0,len(env.LC_Elements)):
-        Mat_Plot[int(env.LC_Elements[LC_Count])]=2
-    plt.subplot(224)
-    plt.imshow(np.flip(np.reshape(Mat_Plot,(Elements_X,Elements_Y)),axis=0),cmap='Blues')
-    plt.show()
+        print('The final topology: ')
+        for BC_Count in range(0,len(env.BC_Elements)):
+            print('BC Element #'+str(BC_Count)+': '+str(int(env.BC_Elements[BC_Count])))
+        for LC_Count in range(0,len(env.LC_Elements)):
+            print('LC Element #'+str(LC_Count)+': '+str(int(env.LC_Elements[LC_Count])))
+            if env.Load_Types[LC_Count]==0:
+                Load_Types='Vertical'
+            else:
+                Load_Types='Horizontal'
+            if env.Load_Directions[LC_Count]==-1:
+                Load_Dir='Tensile'
+            else:
+                Load_Dir='Compressive'
+            print('Load Type: '+Load_Dir)
+            print('Load Direction: '+Load_Types)
+      
+        if Progressive_Refinement:
+            env_primer.render()
+            env_primer2.render()
+        env.render()
+        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        print('Strain Energy for Final Topology: '+str(round(np.max(Final_Results[1]),1)))
+        p=opts.P_Norm
+        print('Maximum P_Norm Stress Perc Increase: '+str(round(1-(env.P_Norm/sum(sum([number**p for number in np.reshape(Final_Results[2],(1,env.EX*env.EY))]))**(1/p)),2)))
+        print('Final Volume Fraction: '+str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
+        
+        print('----------------')
+        Mat_Plot=copy.deepcopy(env_primer.VoidCheck)
+        plt.figure(1)
+        for BC_Count in range(0,len(env_primer.BC_Elements)):
+            Mat_Plot[int(env_primer.BC_Elements[BC_Count])]=3
+        for LC_Count in range(0,len(env_primer.LC_Elements)):
+            Mat_Plot[int(env_primer.LC_Elements[LC_Count])]=2
+        plt.subplot(221)
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(PR_EX,PR_EY)),axis=0),cmap='Blues')
+        Mat_Plot=copy.deepcopy(env_primer2.VoidCheck)
+        for BC_Count in range(0,len(env_primer2.BC_Elements)):
+            Mat_Plot[int(env_primer2.BC_Elements[BC_Count])]=3
+        for LC_Count in range(0,len(env_primer2.LC_Elements)):
+            Mat_Plot[int(env_primer2.LC_Elements[LC_Count])]=2
+            plt.subplot(222)
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(PR2_EX,PR2_EY)),axis=0),cmap='Blues')
+        Mat_Plot=copy.deepcopy(env.VoidCheck)
+        for BC_Count in range(0,len(env.BC_Elements)):
+            Mat_Plot[int(env.BC_Elements[BC_Count])]=3
+        for LC_Count in range(0,len(env.LC_Elements)):
+            Mat_Plot[int(env.LC_Elements[LC_Count])]=2
+        plt.subplot(224)
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(Elements_X,Elements_Y)),axis=0),cmap='Blues')
+        plt.show()
+    else:
+        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        Mat_Plot=copy.deepcopy(env.VoidCheck)
+        App_Plot={}
+        App_Plot['Topology']=[]
+        App_Plot['SE']=[]
+        App_Plot['VF']=[]
+        App_Plot['Topology'].append([str(x) for x in Mat_Plot])
+        App_Plot['SE'].append(str(round(np.max(Final_Results[1]),1)))
+        App_Plot['VF'].append(str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
+        with open('Final_Top.txt', 'w') as outfile:
+            json.dump(App_Plot,outfile)
+        
 def poly_matrix(x, y, order=2):
     """ Function to produce a matrix built on a quadratic surface """
     ncols = (order + 1)**2
