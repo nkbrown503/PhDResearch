@@ -102,7 +102,7 @@ def Condition_Transform(Lx,Ly,Old_EX,Old_EY,New_EX,New_EY,BC_Elements,LC_Element
         New_Row_LC=math.floor((Old_X_Perc*Old_EX)+0.001)
         New_Col_LC=math.floor((Old_Y_Perc*Old_EY)+0.001)
         New_LC_E=(New_Row_LC*Old_EX)+New_Col_LC
-        New_LC1,New_LC2=LC_Nodes(New_LC_E,Load_Type[LC_],Lx,Ly,Old_EX,Old_EY,LC_,Node_Location=False)
+        New_LC1,New_LC2=LC_Nodes(New_LC_E,Load_Type[LC_],Load_Direction[LC_],Lx,Ly,Old_EX,Old_EY,LC_,Node_Location=False)
         New_LC_Elements=np.append(New_LC_Elements,New_LC_E)
         New_LC_Nodes=np.append(New_LC_Nodes,New_LC1)
         New_LC_Nodes=np.append(New_LC_Nodes,New_LC2)
