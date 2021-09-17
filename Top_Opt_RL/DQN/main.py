@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Apr  2 09:34:14 2021
 
@@ -13,10 +12,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import time
+import json
 from keract import get_activations, display_activations 
 import FEA_SOLVER_GENERAL
 from opts import parse_opts
-from TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs, Testing_Inputs, Testing_Info     
+from TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs,App_Inputs, Testing_Inputs, Testing_Info     
 from Matrix_Transforms import obs_flip, action_flip, Mesh_Triming, Mesh_Transform
 from RL_Necessities import Agent 
 def plot_learning_curve(x, scores, figure_file):
@@ -43,7 +43,7 @@ def Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,
     avg_percent=np.mean(per_history[-50:])
     return score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent
 
-def TopOpt_Designing(Time_Trial):
+def TopOpt_Designing(Time_Trial,From_App,User_Conditions):
     if Progressive_Refinement:
         agent_primer= Agent(env_primer,mem_size=Mem_Size,epsilon_dec=Ep_decay,Increase=False,
                             lr=opts.LR, gamma=opts.Gamma,filename_save=filename_save+str(PR_EX)+'by'+str(PR_EY),
@@ -76,12 +76,18 @@ def TopOpt_Designing(Time_Trial):
     if not load_checkpoint:
         TrialData=pd.DataFrame(columns=['Episode','Reward','Successfull Steps','Percent Successful','Avg Loss','SDEV','Epsilon','Time'])
     env.reset_conditions()
+    if From_App:
+        n_games=1
     for i in range(n_games):
 
         Testing = False #Used to render the environment and track learning of the agent 
         if load_checkpoint:
             'If the user wants to test the agent, the user will be prompted to input BC and LC elements'
-            User_Inputs(env,Lx,Ly,Main_EX,Main_EY)
+            if From_App:
+                App_Inputs(env,Lx,Ly,Main_EX,Main_EY,User_Conditions)
+            else:
+            
+                User_Inputs(env,Lx,Ly,Main_EX,Main_EY)
         done = False
         score = 0
     
@@ -100,15 +106,14 @@ def TopOpt_Designing(Time_Trial):
             ''' Set Up to Complete 3 Iterations of Progressive Refinement'''
             #Progressive Refinement #1 Going from Smallest to Intermediate Mesh Size
             env_primer.VoidCheck=list(np.ones((1,env_primer.EX*env_primer.EY))[0])
-            Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,PR_EX,PR_EY,Main_EX,Main_EY,Time_Trial,FEA_Skip=1)
-            #_=Mesh_Triming(env_primer,PR_EX,PR_EY)
+            Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,PR_EX,PR_EY,Main_EX,Main_EY,Time_Trial,From_App,FEA_Skip=1)
             #Progressive Refinement #2 Going for Intermediate to Final Mesh Size
             env_primer2.VoidCheck=Mesh_Transform(PR_EX,PR_EY,PR2_EX,PR2_EY,env_primer.VoidCheck)
-            Prog_Refine_Act(agent_primer2,env,env_primer2,load_checkpoint,Testing,Lx,Ly,PR2_EX,PR2_EY,Main_EX,Main_EY,Time_Trial,FEA_Skip=1)
-            #_=Mesh_Triming(env_primer2,PR2_EX,PR2_EY)
+            Prog_Refine_Act(agent_primer2,env,env_primer2,load_checkpoint,Testing,Lx,Ly,PR2_EX,PR2_EY,Main_EX,Main_EY,Time_Trial,From_App,FEA_Skip=1)
             #This outcome will now be used as the final mesh Size 
             env.VoidCheck=Mesh_Transform(PR2_EX,PR2_EY,Main_EX,Main_EY,env_primer2.VoidCheck)
             #Removed_Num=Mesh_Triming(env_primer,PR_EX,PR_EY)
+            #Uncomment the above line if you want to incorporate mesh trimming
 
             observation[:,:,0]=np.reshape(FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Main_EX,Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[3],(Main_EX,Main_EY))
         observation_v, observation_h,observation_vh=obs_flip(observation,Main_EX,Main_EY)
@@ -140,12 +145,12 @@ def TopOpt_Designing(Time_Trial):
                 env.render()
         toc=time.perf_counter()
 
-        if Time_Trial:
+        if Time_Trial and not From_App:
             print('It took '+str(round(toc-Start_Time_Trial,1))+' seconds to complete this time trial.')
     
         if load_checkpoint:
             #Removed_Num=Mesh_Triming(env,Main_EX,Main_EY)   
-            Testing_Info(env,env_primer,env_primer2,Lx,Ly,Main_EX,Main_EY,PR_EX,PR_EY,PR2_EX,PR2_EY,score,Progressive_Refinement,Fixed=True)
+            Testing_Info(env,env_primer,env_primer2,Lx,Ly,Main_EX,Main_EY,PR_EX,PR_EY,PR2_EX,PR2_EY,score,Progressive_Refinement,From_App,Fixed=True)
         if not load_checkpoint:
             Total_Loss=agent.learn()
         else:
@@ -171,6 +176,15 @@ def TopOpt_Designing(Time_Trial):
      
 tic=time.perf_counter()
 if __name__=='__main__':
+        #------------------------------------------
+    # Information for App
+    From_App=True
+    
+    File_Name='config.json'
+    Json_File = open(File_Name) 
+    User_Conditions = json.load(Json_File)
+    #------------------------------------------
+    
     'General Input' #Still need to adjust to account for parameter changes
     opts=parse_opts()
     Main_EX=opts.Main_EX
@@ -189,7 +203,10 @@ if __name__=='__main__':
     filename_load = 'DDQN_TopOpt_Generalized_CNN_4L_'
     
     '---------------------------------------'
-    LC=int(input('Would you like to train a new set of weights [0] or test a pretrained model [1]: '))
+    if From_App:
+        LC=1
+    else:
+        LC=int(input('Would you like to train a new set of weights [0] or test a pretrained model [1]: '))
     
         
     if LC==0:
@@ -197,19 +214,32 @@ if __name__=='__main__':
     else:
         load_checkpoint=True
     if load_checkpoint:
-        VF_S=int(input('Would you like to input a final volume fraction [0] or a final stress constraint [1]: '))
+        if From_App:
+            VF_S=0
+        else:
+            VF_S=int(input('Would you like to input a final volume fraction [0] or a final stress constraint [1]: '))
         if VF_S==0:
-            VF3=float(input('Input a final volume fraction as a decimal (0,1): '))
+            if From_App:
+                VF3=0.25
+            else:
+                VF3=float(input('Input a final volume fraction as a decimal (0,1): '))
             SC=10 #Ensure that the Stress Constraint is not triggered
         else:
             VF3=0
-            SC=float(input('Input the acceptable percentage of yield stress that is acceptable as a decmial (0,1): '))/10
-    PR=int(input('Would like conduct design using progressive refinement? No [0]    Yes [1]: '))
+            SC=float(input('Input the acceptable percentage of stress increase that is acceptable as a decmial (0,1): '))
+    if From_App:
+        PR=1
+    else:
+        PR=int(input('Would like conduct design using progressive refinement? No [0]    Yes [1]: '))
     if PR==0:
         Progressive_Refinement=False 
     else:
         Progressive_Refinement=True
-    Time_Trial=True
+    if From_App:
+        Time_Trial=True
+    else:
+        Time_Trial=False
+    
     if load_checkpoint:
         Vol_Frac_3=VF3 
         if VF_S==0: #If the user wants to set a final volume fraction, set the intermediate volume fractions accordingly
@@ -227,4 +257,4 @@ if __name__=='__main__':
     env_primer= TopOpt_Gen(Lx,Ly,PR_EX,PR_EY,Vol_Frac_1,SC)
     env_primer2=TopOpt_Gen(Lx,Ly,PR2_EX,PR2_EY,Vol_Frac_2,SC)
     '------------------------------------------'
-    TopOpt_Designing(Time_Trial)
+    TopOpt_Designing(Time_Trial,From_App,User_Conditions)
