@@ -161,4 +161,3 @@ class ReplayBuffer():
         dones = self.terminal_memory[batch]
 
         return states, actions, rewards, new_states, dones
-
