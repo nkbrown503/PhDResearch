@@ -6,8 +6,6 @@ Created on Wed Mar  3 15:23:01 2021
 """
 
 import numpy as np
-import statistics
-#import cupy
 import skimage.measure as measure
 
 'Define the Function that creates the rectangular mesh'
@@ -290,9 +288,9 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,LC_Nodes,Loaded_Directions,BC_N
                stressxy_node[np.ix_(range(i,i+2),range(j,j+2))]=np.reshape(tauxy[Count,:],(2,2))
                Count=Count+1
         for ii in range(0,len(stressx_element)):
-            stressx_element[ii]=statistics.mean(sigmax[ii,:])
-            stressy_element[ii]=statistics.mean(sigmay[ii,:])
-            stressxy_element[ii]=statistics.mean(tauxy[ii,:])
+            stressx_element[ii]=np.mean(sigmax[ii,:])
+            stressy_element[ii]=np.mean(sigmay[ii,:])
+            stressxy_element[ii]=np.mean(tauxy[ii,:])
        
         stressx_element=np.reshape(stressx_element,(ElementsX,ElementsY))
         stressy_element=np.reshape(stressy_element,(ElementsX,ElementsY))
@@ -315,7 +313,6 @@ def FEASolve(VoidCheck,Lx,Ly,ElementsX,ElementsY,LC_Nodes,Loaded_Directions,BC_N
         
     
     if Stress is False:
-        VonMises=[]
         VonMises_nn=[]
 
     return(MaxDisplacements,StrainEnergy,VonMises_element,VonMises_nn,VonMises_node_nn)
