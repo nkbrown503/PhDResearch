@@ -469,9 +469,8 @@ def Reward_Surface(opts):
                          np.linspace(0, 1, ny))
     GoG = poly_matrix(xx.ravel(), yy.ravel(), ordr)
     zz = np.reshape(np.dot(GoG, m), xx.shape)
-    with open('Trial_Data/Reward_Data.pkl','rb') as f:
-        Data = np.load(f,allow_pickle=True)
-    Data=Data.to_numpy()
+    with open('Trial_Data/Reward_Data.npy','rb') as f:
+        Data = np.load(f)
     X_Data=Data[:,0]
     Y_Data=Data[:,1]
     Z_Data=Data[:,2]
