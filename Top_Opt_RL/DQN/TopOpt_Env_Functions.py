@@ -7,7 +7,6 @@ Created on Thu Aug 12 12:00:02 2021
 from gym import Env
 from gym.spaces import Discrete
 import numpy as np
-import pickle
 import itertools
 from Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
 import FEA_SOLVER_GENERAL
@@ -16,7 +15,7 @@ import copy
 from Matrix_Transforms import Condition_Transform
 import random
 import sys
-
+ 
 class TopOpt_Gen(Env):
     def __init__(self,Elements_X,Elements_Y,Vol_Frac,SC,opts):
         #Actons we can take... remove any of the blocks
@@ -471,7 +470,7 @@ def Reward_Surface(opts):
     GoG = poly_matrix(xx.ravel(), yy.ravel(), ordr)
     zz = np.reshape(np.dot(GoG, m), xx.shape)
     with open('Trial_Data/Reward_Data.pkl','rb') as f:
-        Data = pickle.load(f)
+        Data = np.load(f,allow_pickle=True)
     Data=Data.to_numpy()
     X_Data=Data[:,0]
     Y_Data=Data[:,1]
