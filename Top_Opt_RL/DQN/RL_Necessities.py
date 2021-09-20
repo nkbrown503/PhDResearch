@@ -5,31 +5,27 @@ Created on Thu Aug 12 17:06:46 2021
 @author: nbrow
 """
 import numpy as np
-import math
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 import tensorflow.keras as keras 
 from tensorflow.keras import layers,models 
-from opts import parse_opts
-opts=parse_opts()
 class Agent():
-    def __init__(self,env,Increase, lr, gamma, n_actions, epsilon, batch_size,
-                 input_dims,filename_save,filename_load,EX,EY, epsilon_dec,mem_size, eps_end=opts.Epsilon_End, 
-                 replace=opts.Replace):
+    def __init__(self,env,opts,Increase,n_actions,input_dims,epsilon,
+                 filename_save,filename_load,EX,EY):
         self.action_space = [i for i in range(n_actions)]
         self.n_actions=n_actions
-        self.gamma = gamma
+        self.gamma = opts.gamma
         self.epsilon = epsilon
         self.EX=EX
         self.EY=EY
         self.env=env
-        self.eps_dec = epsilon_dec
-        self.eps_min = eps_end
-        self.replace = replace
-        self.batch_size = batch_size
-        self.lr=lr
+        self.eps_dec = opts.epsilon_dec
+        self.eps_min = opts.eps_end
+        self.replace = opts.replace
+        self.batch_size = opts.batch_size
+        self.lr=opts.lr
         self.learn_step_counter = 0
-        self.memory = ReplayBuffer(mem_size, input_dims)
+        self.memory = ReplayBuffer(opts.mem_size, input_dims)
         self.q_eval = DuelingDeepQNetwork(self.EX*self.EY,Increase)
         self.q_next = DuelingDeepQNetwork(self.EX*self.EY,Increase)
         self.checkpoint_file_save='NN_Weights/'+filename_save+'_NN_weights'
