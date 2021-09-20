@@ -6,7 +6,7 @@ Created on Thu Aug 12 17:06:46 2021
 """
 import numpy as np
 from tensorflow.keras.optimizers import Adam
-import tensorflow as tf
+from tensorflow.math import argmax
 import tensorflow.keras as keras 
 from tensorflow.keras import layers,models 
 class Agent():
@@ -56,7 +56,7 @@ class Agent():
             state = observation
             state=state.reshape(-1,self.EX,self.EY,3)
             actions = self.q_eval.call(state)
-            action=tf.math.argmax(actions, axis=1).numpy()[0]
+            action=argmax(actions, axis=1).numpy()[0]
 
         return action
 
@@ -75,7 +75,7 @@ class Agent():
         self.q_pred=q_pred
         q_next = self.q_next(states_)
         q_target = q_pred.numpy()
-        max_actions = tf.math.argmax(self.q_eval(states_), axis=1)
+        max_actions = argmax(self.q_eval(states_), axis=1)
         # improve on my solution!
         for idx, terminal in enumerate(dones):
             #if terminal:
