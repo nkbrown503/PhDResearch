@@ -11,8 +11,6 @@ import pandas as pd
 import itertools
 from Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
 import FEA_SOLVER_GENERAL
-from opts import parse_opts
-import statistics 
 import math
 import copy
 import json
@@ -20,18 +18,18 @@ from Matrix_Transforms import Condition_Transform
 import matplotlib.pyplot as plt
 import random
 import sys
-opts=parse_opts()
+
 class TopOpt_Gen(Env):
-    def __init__(self,Lx,Ly,Elements_X,Elements_Y,Vol_Frac,SC):
+    def __init__(self,Elements_X,Elements_Y,Vol_Frac,SC,opts):
         #Actons we can take... remove any of the blocks
         self.EX=Elements_X
         self.p=opts.P_Norm
-        self.RS=Reward_Surface()[0]
-        self.RV=Reward_Surface()[1]
+        self.RS=Reward_Surface(opts)[0]
+        self.RV=Reward_Surface(opts)[1]
         self.SC=SC
-        self.Lx=Lx
+        self.Lx=opts.Lx
         self.EY=Elements_Y
-        self.Ly=Ly
+        self.Ly=opts.Ly
         self.action_space=Discrete(self.EX*self.EY)
         self.eta=opts.Eta
         self.Vol_Frac=Vol_Frac
@@ -68,7 +66,7 @@ class TopOpt_Gen(Env):
                 reward = self.RS[(int((self.Max_SE_Tot/self.Max_SE_Ep)*1000))-1,int((It/(self.EX*self.EY))*1000)-1]
                 if not load_checkpoint:
                     reward2=self.RV[int(1-(np.reshape(self.Stress_state,(self.EX*self.EY,1))[action])*1000)-1]
-                    reward=statistics.mean([reward,reward2])
+                    reward=np.mean([reward,reward2])
             if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
                 self.Stress_state=Run_Results[3]
                 self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
@@ -194,14 +192,14 @@ class TopOpt_Gen(Env):
          self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
          self.Max_SE_Tot=np.max(self.Results[1])
 
-def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY,Time_Trial,From_App,FEA_Skip):
+def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,opts,Small_EX,Small_EY,Time_Trial,From_App,FEA_Skip):
     '''This function will deliver the optimal topology of the smaller sized environment.
     This final topology will then be transformed into the equivalent topology at the 
     larger selected size. This larger topology will then be based back to the main function
     and the topology removal process will continue.'''
     Stable=False
     while not Stable:
-        env_primer.BC_Nodes,env_primer.BC_Elements,env_primer.LC_Elements,env_primer.LC_Nodes,env_primer.Load_Directions=Condition_Transform(Lx,Ly,Small_EX,Small_EY,Big_EX,Big_EY,env.BC_Elements,env.LC_Elements,env.Load_Types,env.Load_Directions)
+        env_primer.BC_Nodes,env_primer.BC_Elements,env_primer.LC_Elements,env_primer.LC_Nodes,env_primer.Load_Directions=Condition_Transform(opts.Lx,opts.Ly,Small_EX,Small_EY,opts.Main_EX,opts.Main_EY,env.BC_Elements,env.LC_Elements,env.Load_Types,env.Load_Directions)
         
         LN_Hold=env_primer.LC_Nodes
         LT_Count=0
@@ -235,7 +233,7 @@ def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,Lx,Ly,Sm
     Last_Reward=0
     if Testing and not From_App:
         env_primer.render()
-def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
+def App_Inputs(env,opts,User_Conditions):
     '''To improve the adaptability of this method, a web-app has been developed
     using Heroku The web-app will provide an interactive environment for the user
     to select the boundary and loading conditions. The BCs and LCs will be imported as 
@@ -247,11 +245,11 @@ def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
     env.Load_Types=[]
     env.Load_Directions=[]
 
-    BC=[int(x) for x in User_Conditions['bcs']]
-    Right=[int(x) for x in User_Conditions['rights']]
-    Left=[int(x) for x in User_Conditions['lefts']]
-    #Up=[int(x) for x in User_Conditions['ups']]
-    Down=[int(x) for x in User_Conditions['downs']]
+    BC=[int(x)-1 for x in User_Conditions['bcs']]
+    Right=[int(x)-1 for x in User_Conditions['rights']]
+    Left=[int(x)-1 for x in User_Conditions['lefts']]
+    Up=[int(x)-1 for x in User_Conditions['ups']]
+    Down=[int(x)-1 for x in User_Conditions['downs']]
     env.BC_Elements=np.append(env.BC_Elements,BC)
 
     env.LC_Elements=np.append(env.LC_Elements,Right).astype('int')
@@ -262,9 +260,9 @@ def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
     env.Load_Types=np.append(env.Load_Types,[1]*len(Left)).astype('int')
     env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Left)).astype('int')
     
-    #env.LC_Elements=np.append(env.LC_Elements,Up).astype('int')
-    #env.Load_Types=np.append((env.Load_Types,[0]*len(Up))).astype('int')
-    #env.Load_Directions=np.append(env.Load_Directions,[1]*len(Up)).astype('int')
+    env.LC_Elements=np.append(env.LC_Elements,Up).astype('int')
+    env.Load_Types=np.append(env.Load_Types,[0]*len(Up)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[1]*len(Up)).astype('int')
     
     env.LC_Elements=np.append(env.LC_Elements,Down).astype('int')
     env.Load_Types=np.append(env.Load_Types,[0]*len(Down)).astype('int')
@@ -272,8 +270,8 @@ def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
     for Counting in range(0,len(env.LC_Elements)):
         if env.Load_Types[Counting]==0:
             LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
-            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(Elements_X+1)*(Elements_Y+1))
-            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(Elements_X+1)*(Elements_Y+1))
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(opts.Main_EX+1)*(opts.Main_EY+1))
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(opts.Main_EX+1)*(opts.Main_EY+1))
         else:
             LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0])
@@ -282,26 +280,26 @@ def App_Inputs(env,Lx,Ly,Elements_X,Elements_Y,User_Conditions):
         env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[0])
         env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[1])
 
-    env.LC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.LC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     for LCS in range(0,len(env.LC_Elements)):
                 env.LC_state[int(env.LC_Elements[LCS])]=1
-    env.LC_state=np.reshape(env.LC_state,(Elements_X,Elements_Y))
+    env.LC_state=np.reshape(env.LC_state,(opts.Main_EX,opts.Main_EY))
     env.BC=[]
     env.BC=np.append(env.BC,env.BC_Elements)
     env.BC=np.append(env.BC,env.LC_Elements)
-    env.BC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.BC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     for BCS in range(0,len(env.BC_Elements)):
         env.BC_state[int(env.BC_Elements[BCS])]=1
-    env.BC_state=np.reshape(env.BC_state,(Elements_X,Elements_Y))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
+    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
     
     
-def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
+def User_Inputs(env,opts):
     '''When testing a trained agent, the user will be prompted to select
     a single element to act as the loaded element, and two elements to act as the boundary 
     condition elements. Depending on where the elements are located, the nodes
     corresponding to these elements will be selected'''
-    print(np.flip(np.reshape(range(0,(Elements_X)*(Elements_Y)),(Elements_X,Elements_Y)),0))
+    print(np.flip(np.reshape(range(0,(opts.Main_EX)*(opts.Main_EY)),(opts.Main_EX,opts.Main_EY)),0))
     BC_Count=int(input('How many boundary elements would you like to have: '))
     env.BC_Elements=[]
     env.LC_Elements=[]
@@ -311,16 +309,16 @@ def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
     env.Load_Directions=[]
     for Counting in range(0,BC_Count):
         env.BC_Elements=np.append(env.BC_Elements,int(input('Please select an element to apply Boundary condition #'+str(Counting+1)+': ')))
-        if env.BC_Elements[Counting]>(Elements_X)*(Elements_Y) or env.BC_Elements[Counting]<0 or env.BC_Elements[Counting]!=int(env.BC_Elements[Counting]):
+        if env.BC_Elements[Counting]>(opts.Main_EX)*(opts.Main_EY) or env.BC_Elements[Counting]<0 or env.BC_Elements[Counting]!=int(env.BC_Elements[Counting]):
             print('Code Terminated By User...')
             sys.exit()
-    print(np.flip(np.reshape(range(0,(Elements_X*Elements_Y)),(Elements_X,Elements_Y)),0))
+    print(np.flip(np.reshape(range(0,(opts.Main_EX*opts.Main_EY)),(opts.Main_EX,opts.Main_EY)),0))
     LC_Count=int(input('How many loading elements would you like to have: '))
     
 
     for Counting in range(0,LC_Count):
         env.LC_Elements=np.append(env.LC_Elements,int(input('Please select an element to apply the load #'+str(Counting+1)+': ')))
-        if env.LC_Elements[Counting]>(Elements_X)*(Elements_Y) or env.LC_Elements[Counting]<0 or env.LC_Elements[Counting]!=int(env.LC_Elements[Counting]):
+        if env.LC_Elements[Counting]>(opts.Main_EX)*(opts.Main_EY) or env.LC_Elements[Counting]<0 or env.LC_Elements[Counting]!=int(env.LC_Elements[Counting]):
             print('Code Terminated By User...')
             sys.exit()
         env.Load_Types=np.append(env.Load_Types,int(input('Input 0 for a Vertical Load or Input 1 for a Horizontal load for this element: ')))
@@ -328,8 +326,8 @@ def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
     for Counting in range(0,LC_Count):
         if env.Load_Types[Counting]==0:
             LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
-            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(Elements_X+1)*(Elements_Y+1))
-            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(Elements_X+1)*(Elements_Y+1))
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(opts.Main_EX+1)*(opts.Main_EY+1))
+            env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(opts.Main_EX+1)*(opts.Main_EY+1))
         else:
             LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0])
@@ -338,44 +336,44 @@ def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
         env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[0])
         env.BC_Nodes=np.append(env.BC_Nodes,BC_Nodes(int(env.BC_Elements[Counting]),env.Lx,env.Ly,env.EX,env.EY)[1])
 
-    env.LC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.LC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     for LCS in range(0,len(env.LC_Elements)):
                 env.LC_state[int(env.LC_Elements[LCS])]=1
-    env.LC_state=np.reshape(env.LC_state,(Elements_X,Elements_Y))
+    env.LC_state=np.reshape(env.LC_state,(opts.Main_EX,opts.Main_EY))
     env.BC=[]
     env.BC=np.append(env.BC,env.BC_Elements)
     env.BC=np.append(env.BC,env.LC_Elements)
-    env.BC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.BC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     for BCS in range(0,len(env.BC_Elements)):
         env.BC_state[int(env.BC_Elements[BCS])]=1
-    env.BC_state=np.reshape(env.BC_state,(Elements_X,Elements_Y))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
+    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
     
     return 
-def Testing_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
+def Testing_Inputs(env,opts):
     '''Every 200 episodes, the boundary and loading conditions
     should be set as those of a cantilever beam to monitor the progress
     of the agents learning'''
-    env.BC_Nodes=np.array([0,0,Elements_X*Elements_Y,Elements_X*Elements_Y])
-    env.LC_Nodes=np.array([Elements_X+(Elements_X+1)*(Elements_Y+1),Elements_X-1+(Elements_X+1)*(Elements_Y+1)])
+    env.BC_Nodes=np.array([0,0,opts.Main_EX*opts.Main_EY,opts.Main_EX*opts.Main_EY])
+    env.LC_Nodes=np.array([opts.Main_EX+(opts.Main_EX+1)*(opts.Main_EY+1),opts.Main_EX-1+(opts.Main_EX)*(opts.Main_EY+1)])
 
-    env.LC_Elements=np.array([np.where(FEA_SOLVER_GENERAL.rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1]==env.LC_Nodes[0]-((Elements_X+1)*(Elements_Y+1)))[0][0]])
-    env.BC_Elements=[0,(Elements_X)*(Elements_Y-1)]
-    env.LC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.LC_Elements=np.array([np.where(FEA_SOLVER_GENERAL.rectangularmesh(opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY)[1]==env.LC_Nodes[0]-((opts.Main_EX+1)*(opts.Main_EY+1)))[0][0]])
+    env.BC_Elements=[0,(opts.Main_EX)*(opts.Main_EY-1)]
+    env.LC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     env.LC_state[env.LC_Elements[0]]=1
-    env.LC_state=np.reshape(env.LC_state,(Elements_X,Elements_Y))
+    env.LC_state=np.reshape(env.LC_state,(opts.Main_EX,opts.Main_EY))
     env.Load_Types=[0]
     env.Load_Directions=[-1] #1 for Compressive Load, -1 for tensile load
     env.BC=[]
     env.BC=np.append(env.BC,env.BC_Elements)
     env.BC=np.append(env.BC,env.LC_Elements)
-    env.BC_state=list(np.zeros((1,(Elements_X)*(Elements_Y)))[0])
+    env.BC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     env.BC_state[env.BC_Elements[0]]=1
     env.BC_state[env.BC_Elements[1]]=1
-    env.BC_state=np.reshape(env.BC_state,(Elements_X,Elements_Y))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
+    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
 
-def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR_EY,PR2_EX,PR2_EY,score,Progressive_Refinement,From_App,Fixed):
+def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,From_App,Fixed):
     '''Function that outputs the results of a testing trial. The results include
     the score based on the reward function, the final strain energy, and if needed
     the number of arbitrary blocks removed by the shaving algorithm'''
@@ -402,7 +400,7 @@ def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR
             env_primer.render()
             env_primer2.render()
         env.render()
-        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         print('Strain Energy for Final Topology: '+str(round(np.max(Final_Results[1]),1)))
         p=opts.P_Norm
         print('Maximum P_Norm Stress Perc Increase: '+str(round(1-(env.P_Norm/sum(sum([number**p for number in np.reshape(Final_Results[2],(1,env.EX*env.EY))]))**(1/p)),2)))
@@ -416,24 +414,24 @@ def Testing_Info(env,env_primer,env_primer2,Lx,Ly,Elements_X,Elements_Y,PR_EX,PR
         for LC_Count in range(0,len(env_primer.LC_Elements)):
             Mat_Plot[int(env_primer.LC_Elements[LC_Count])]=2
         plt.subplot(221)
-        plt.imshow(np.flip(np.reshape(Mat_Plot,(PR_EX,PR_EY)),axis=0),cmap='Blues')
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(opts.PR_EX,opts.PR_EY)),axis=0),cmap='Blues')
         Mat_Plot=copy.deepcopy(env_primer2.VoidCheck)
         for BC_Count in range(0,len(env_primer2.BC_Elements)):
             Mat_Plot[int(env_primer2.BC_Elements[BC_Count])]=3
         for LC_Count in range(0,len(env_primer2.LC_Elements)):
             Mat_Plot[int(env_primer2.LC_Elements[LC_Count])]=2
             plt.subplot(222)
-        plt.imshow(np.flip(np.reshape(Mat_Plot,(PR2_EX,PR2_EY)),axis=0),cmap='Blues')
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(opts.PR2_EX,opts.PR2_EY)),axis=0),cmap='Blues')
         Mat_Plot=copy.deepcopy(env.VoidCheck)
         for BC_Count in range(0,len(env.BC_Elements)):
             Mat_Plot[int(env.BC_Elements[BC_Count])]=3
         for LC_Count in range(0,len(env.LC_Elements)):
             Mat_Plot[int(env.LC_Elements[LC_Count])]=2
         plt.subplot(224)
-        plt.imshow(np.flip(np.reshape(Mat_Plot,(Elements_X,Elements_Y)),axis=0),cmap='Blues')
+        plt.imshow(np.flip(np.reshape(Mat_Plot,(opts.Main_EX,opts.Main_EY)),axis=0),cmap='Blues')
         plt.show()
     else:
-        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),Lx,Ly,Elements_X,Elements_Y,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         Mat_Plot=copy.deepcopy(env.VoidCheck)
         App_Plot={}
         App_Plot['Topology']=[]
@@ -454,7 +452,7 @@ def poly_matrix(x, y, order=2):
         G[:, k] = x**i * y**j
     return G   
 
-def Reward_Surface():
+def Reward_Surface(opts):
     x=np.array([1,0,0,1,.5,0,.5])
     y=np.array([0,0,1,1,.5,.5,0])
     z=np.array([])
