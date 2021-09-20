@@ -42,7 +42,7 @@ def Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,
     avg_percent=np.mean(per_history[-50:])
     return score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent
 
-def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts):
+def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint):
     if Progressive_Refinement:
         agent_primer= Agent(env_primer,opts,Increase=False,filename_save=opts.filename_save+str(opts.PR_EX)+'by'+str(opts.PR_EY),
                             filename_load=opts.filename_load,EX=opts.PR_EX,EY=opts.PR_EY, n_actions=opts.PR_EX*opts.PR_EY,
@@ -73,8 +73,8 @@ def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts):
         TrialData=pd.DataFrame(columns=['Episode','Reward','Successfull Steps','Percent Successful','Avg Loss','SDEV','Epsilon','Time'])
     env.reset_conditions()
     if From_App:
-        n_games=1
-    for i in range(n_games):
+        opts.n_games=1
+    for i in range(opts.n_games):
 
         Testing = False #Used to render the environment and track learning of the agent 
         if load_checkpoint:
@@ -147,14 +147,14 @@ def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts):
     
         if load_checkpoint:
             #Removed_Num=Mesh_Triming(env,Main_EX,Main_EY)   
-            Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,From_App,Fixed=True)
+            App_Plot=Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,From_App,Fixed=True)
         if not load_checkpoint:
             Total_Loss=agent.learn()
         else:
             Total_Loss=1
         score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent=Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,score,opts.Main_EX,opts.Main_EY,i)
     
-        if n_games!=1:
+        if opts.n_games!=1:
             env.reset_conditions()
         if avg_score>=best_score and not load_checkpoint: 
             '''If the average score of the previous runs is better than 
@@ -192,7 +192,6 @@ if __name__=='__main__':
     else:
         LC=int(input('Would you like to train a new set of weights [0] or test a pretrained model [1]: '))
     
-        
     if LC==0:
         load_checkpoint=False 
     else:
@@ -205,7 +204,6 @@ if __name__=='__main__':
         if VF_S==0:
             if From_App:
                 VF3=float(User_Conditions['volfraction'])
-        
             else:
                 VF3=float(input('Input a final volume fraction as a decimal (0,1): '))
             SC=10 #Ensure that the Stress Constraint is not triggered
@@ -242,4 +240,4 @@ if __name__=='__main__':
     env_primer= TopOpt_Gen(opts.PR_EX,opts.PR_EY,Vol_Frac_1,SC,opts)
     env_primer2=TopOpt_Gen(opts.PR2_EX,opts.PR2_EY,Vol_Frac_2,SC,opts)
     '------------------------------------------'
-    TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts)
+    TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint)
