@@ -5,8 +5,8 @@ Created on Thu Aug 12 15:34:50 2021
 @author: nbrow
 """
 import numpy as np
-import scipy 
 import math
+from scipy.signal import convolve2d
 from Node_Element_Extraction import BC_Nodes,LC_Nodes
 def action_flip(action,Elements_X,Elements_Y):
     
@@ -45,13 +45,12 @@ def Mesh_Triming(env,Elements_X,Elements_Y):
     substantial support to the rest of the structure. It can be thought
     of as a shaving algorithm to help catch single elements the RL agent mises 
     at the end'''
-    
     Final=False
     Count_1=list(env.VoidCheck).count(0)
     while not Final:
         VC_Hold=np.zeros((Elements_X+2,Elements_Y+2))
         VC_Hold[1:Elements_X+1,1:Elements_Y+1]=np.reshape(env.VoidCheck,(Elements_X,Elements_Y))
-        c = scipy.signal.convolve2d(VC_Hold, np.array([[0,1,0],[1,0,1],[0,1,0]]), mode='valid')
+        c = convolve2d(VC_Hold, np.array([[0,1,0],[1,0,1],[0,1,0]]), mode='valid')
         VV=VC_Hold[1:Elements_X+1,1:Elements_Y+1]
         VV_Loc=np.where(np.reshape(VV,(1,(Elements_X*Elements_Y)))==0)[1]
         c=np.reshape(c,(1,Elements_X*Elements_Y))[0]
@@ -141,6 +140,3 @@ def Mesh_Transform(Old_EX,Old_EY,New_EX,New_EY,Config):
     New_Config=np.reshape(New_Config,(1,New_EX*New_EY))
     
     return list(New_Config[0])
-            
-            
-            
