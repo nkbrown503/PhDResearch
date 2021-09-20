@@ -81,7 +81,7 @@ def parse_opts():
                     default=30000,
                     type=int,
                     help='Size of the Replay Buffer')
-    parser.add_argument('--Num_Games',
+    parser.add_argument('--n_games',
                     default=50_000,
                     type=int,
                     help='Maximum Number of Training Episodes Conducted')
@@ -131,3 +131,4 @@ def parse_opts():
     args = parser.parse_args()
 
     return args
+    
