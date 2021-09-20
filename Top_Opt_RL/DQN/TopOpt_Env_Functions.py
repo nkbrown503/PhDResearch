@@ -7,15 +7,13 @@ Created on Thu Aug 12 12:00:02 2021
 from gym import Env
 from gym.spaces import Discrete
 import numpy as np
-import pandas as pd
+import pickle
 import itertools
 from Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
 import FEA_SOLVER_GENERAL
 import math
 import copy
-import json
 from Matrix_Transforms import Condition_Transform
-import matplotlib.pyplot as plt
 import random
 import sys
 
@@ -378,6 +376,7 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
     the score based on the reward function, the final strain energy, and if needed
     the number of arbitrary blocks removed by the shaving algorithm'''
     if not From_App:
+        import matplotlib.pyplot as plt
         print('----------------')
     
         print('The final topology: ')
@@ -430,6 +429,7 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
         plt.subplot(224)
         plt.imshow(np.flip(np.reshape(Mat_Plot,(opts.Main_EX,opts.Main_EY)),axis=0),cmap='Blues')
         plt.show()
+        App_Plot={}
     else:
         Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         Mat_Plot=copy.deepcopy(env.VoidCheck)
@@ -440,8 +440,7 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
         App_Plot['Topology'].append([str(x) for x in Mat_Plot])
         App_Plot['SE'].append(str(round(np.max(Final_Results[1]),1)))
         App_Plot['VF'].append(str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
-        with open('Final_Top.txt', 'w') as outfile:
-            json.dump(App_Plot,outfile)
+    return App_Plot
         
 def poly_matrix(x, y, order=2):
     """ Function to produce a matrix built on a quadratic surface """
@@ -471,7 +470,8 @@ def Reward_Surface(opts):
                          np.linspace(0, 1, ny))
     GoG = poly_matrix(xx.ravel(), yy.ravel(), ordr)
     zz = np.reshape(np.dot(GoG, m), xx.shape)
-    Data=pd.read_pickle('Trial_Data/Reward_Data.pkl')
+    with open('Trial_Data/Reward_Data.pkl','rb') as f:
+        Data = pickle.load(f)
     Data=Data.to_numpy()
     X_Data=Data[:,0]
     Y_Data=Data[:,1]
