@@ -6,7 +6,7 @@ Created on Fri Apr  2 09:34:14 2021
 """
 
 ''' Nathan Brown 
-Policy Gradient Training of Topology Optimization through Reinforcement learning'''
+Main Function for the Reinforcement Learning Based Topology Optimization Solver using Double Q-Learning'''
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import numpy as np
