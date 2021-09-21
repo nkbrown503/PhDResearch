@@ -7,7 +7,7 @@ Created on Thu Aug 19 11:07:49 2021
 import numpy as np
 import pandas as pd
 import math
-from Node_Element_Extraction import Element_Lists
+from Top_Opt_RL.DQN. Node_Element_Extraction import Element_Lists
 Elements_X=20
 Elements_Y=20
 Go_List,Elem_List,Bottom_List,Top_List,Left_List,Right_List=Element_Lists(Elements_X,Elements_Y)

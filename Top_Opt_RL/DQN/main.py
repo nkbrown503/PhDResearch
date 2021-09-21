@@ -12,11 +12,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 import time
 import json
-import FEA_SOLVER_GENERAL
-from opts import parse_opts
-from TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs,App_Inputs, Testing_Inputs, Testing_Info     
-from Matrix_Transforms import obs_flip, action_flip, Mesh_Transform
-from RL_Necessities import Agent 
+# import FEA_SOLVER_GENERAL
+from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import *
+# from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import FEA_SOLVER_GENERAL
+
+from Top_Opt_RL.DQN.opts import parse_opts
+from Top_Opt_RL.DQN.TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs,App_Inputs, Testing_Inputs, Testing_Info     
+from Top_Opt_RL.DQN.Matrix_Transforms import obs_flip, action_flip, Mesh_Transform
+from Top_Opt_RL.DQN.RL_Necessities import Agent 
 def plot_learning_curve(x, scores, figure_file):
     import matplotlib.pyplot as plt
     running_avg = np.zeros(len(scores))
@@ -112,7 +115,7 @@ def TopOpt_Designing(User_Conditions,opts, envs):
             #Removed_Num=Mesh_Triming(env_primer,PR_EX,PR_EY)
             #Uncomment the above line if you want to incorporate mesh trimming
 
-            observation[:,:,0]=np.reshape(FEA_SOLVER_GENERAL.FEASolve(envs.env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,envs.env.LC_Nodes,envs.env.Load_Directions,envs.env.BC_Nodes,Stress=True)[3],(opts.Main_EX,opts.Main_EY))
+            observation[:,:,0]=np.reshape(FEASolve(envs.env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,envs.env.LC_Nodes,envs.env.Load_Directions,envs.env.BC_Nodes,Stress=True)[3],(opts.Main_EX,opts.Main_EY))
         observation_v, observation_h,observation_vh=obs_flip(observation,opts.Main_EX,opts.Main_EY)
         Last_Reward=0
         while not done:
@@ -172,7 +175,7 @@ def TopOpt_Designing(User_Conditions,opts, envs):
         if i%100==0 and not opts.Load_Checkpoints and i>0:
             TrialData.to_pickle('Trial_Data/'+opts.filename_save +'_TrialData.pkl')
             plot_learning_curve(range(0,i+1), score_history, figure_file)
-        return App_Plot
+        # return App_Plot
      
 class EnviromentsRL:
     def __init__(self, opts):

@@ -7,8 +7,8 @@ Created on Thu Aug 12 12:39:07 2021
 import numpy as np
 import math
 import sys
-from Node_Element_Extraction import BC_Nodes, LC_Nodes
-import FEA_SOLVER_GENERAL
+from Top_Opt_RL.DQN. Node_Element_Extraction import BC_Nodes, LC_Nodes
+import Top_Opt_RL.DQN. FEA_SOLVER_GENERAL as FEA_SOLVER_GENERAL
 def User_Inputs(env,Lx,Ly,Elements_X,Elements_Y):
     '''When testing a trained agent, the user will be prompted to select
     a single element to act as the loaded element, and two elements to act as the boundary 
