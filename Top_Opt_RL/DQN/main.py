@@ -69,8 +69,8 @@ def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint):
     Loss_history=[]
     
     if not load_checkpoint:
-        import pandas as pd 
-        TrialData=pd.DataFrame(columns=['Episode','Reward','Successfull Steps','Percent Successful','Avg Loss','SDEV','Epsilon','Time'])
+        from pandas import DataFrame 
+        TrialData=DataFrame(columns=['Episode','Reward','Successfull Steps','Percent Successful','Avg Loss','SDEV','Epsilon','Time'])
     env.reset_conditions()
     if From_App:
         opts.n_games=1
@@ -170,6 +170,7 @@ def TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint):
         if i%100==0 and not load_checkpoint and i>0:
             TrialData.to_pickle('Trial_Data/'+opts.filename_save +'_TrialData.pkl')
             plot_learning_curve(range(0,i+1), score_history, figure_file)
+        return App_Plot
      
 tic=time.perf_counter()
 if __name__=='__main__':
@@ -240,4 +241,5 @@ if __name__=='__main__':
     env_primer= TopOpt_Gen(opts.PR_EX,opts.PR_EY,Vol_Frac_1,SC,opts)
     env_primer2=TopOpt_Gen(opts.PR2_EX,opts.PR2_EY,Vol_Frac_2,SC,opts)
     '------------------------------------------'
-    TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint)
+    App_Plot=TopOpt_Designing(Time_Trial,From_App,User_Conditions,opts,load_checkpoint)
+    json.dump( App_Plot, open( "App_Data.json", 'w' ) )
