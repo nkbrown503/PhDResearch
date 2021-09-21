@@ -28,8 +28,8 @@ class Agent():
         self.memory = ReplayBuffer(opts.mem_size, input_dims)
         self.q_eval = DuelingDeepQNetwork(self.EX*self.EY,Increase)
         self.q_next = DuelingDeepQNetwork(self.EX*self.EY,Increase)
-        self.checkpoint_file_save='NN_Weights/'+filename_save+'_NN_weights'
-        self.checkpoint_file_load='NN_Weights/'+filename_load+'_NN_weights'
+        self.checkpoint_file_save=opts.base_folder+'/NN_Weights/'+filename_save+'_NN_weights'
+        self.checkpoint_file_load=opts.base_folder+'/NN_Weights/'+filename_load+'_NN_weights'
         self.q_eval.compile(optimizer=Adam(learning_rate=self.lr),
                             loss='mean_squared_error')
         # just a formality, won't optimize network

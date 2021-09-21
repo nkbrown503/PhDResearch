@@ -160,6 +160,10 @@ def parse_opts(args_in = None):
                        default=True,
                        type=bool,
                        help="True if being called by an external app. Not sure this is needed. ")
+    parser.add_argument('--base_folder',
+                       default=r"PhDResearch/Top_Opt_RL/DQN",
+                       type=str,
+                       help="Folder where to find saved files. Helpful if not running the app from the main folder.  ")
  
 
     if args_in:
