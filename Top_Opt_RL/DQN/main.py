@@ -61,36 +61,24 @@ def TopOpt_Designing(User_Conditions,opts, envs):
     agent = Agent(envs.env,opts,Increase=False,filename_save=opts.filename_save+str(opts.Main_EX)+'by'+str(opts.Main_EY),
                   filename_load=opts.filename_load,EX=opts.Main_EX,EY=opts.Main_EY, n_actions=opts.Main_EX*opts.Main_EY, 
                   epsilon=1.0, input_dims=[opts.Main_EX,opts.Main_EY,3])
-    if opts.Load_Checkpoints:
-        agent.load_models()
-    
+    if opts.Load_Checkpoints: agent.load_models()    
     figure_file = 'plots/' + opts.filename_save +'_reward.png'    
-    best_score = envs.env.reward_range[0]
-    
-    score_history = []
-    per_history=[]
-    succ_history=[]
-    Loss_history=[]
+    best_score = envs.env.reward_range[0]    
+    score_history ,per_history,succ_history,Loss_history= [],[],[],[]
     
     if not opts.Load_Checkpoints:
         from pandas import DataFrame 
         TrialData=DataFrame(columns=['Episode','Reward','Successfull Steps','Percent Successful','Avg Loss','SDEV','Epsilon','Time'])
     envs.env.reset_conditions()
-    if opts.From_App:
-        opts.n_games=1
+    if opts.From_App:  opts.n_games=1
     for i in range(opts.n_games):
-
         Testing = False #Used to render the environment and track learning of the agent 
         if opts.Load_Checkpoints:
             'If the user wants to test the agent, the user will be prompted to input BC and LC elements'
-            if opts.From_App:
-                App_Inputs(envs.env,opts,User_Conditions)
-            else:
-            
-                User_Inputs(envs.env,opts)
+            if opts.From_App:  App_Inputs(envs.env,opts,User_Conditions)
+            else:  User_Inputs(envs.env,opts)
         done = False
-        score = 0
-    
+        score = 0    
         if i%10==0 and i>=100:
             Testing=True
             if i%200==0:
@@ -98,8 +86,7 @@ def TopOpt_Designing(User_Conditions,opts, envs):
                 Testing_Inputs(envs.env,opts)
                 print('--------Testing Run------')
         envs.env.VoidCheck=list(np.ones((1,envs.env.EX*envs.env.EY))[0])
-        if Time_Trial:
-            Start_Time_Trial=time.perf_counter()
+        if Time_Trial:     Start_Time_Trial=time.perf_counter()
         observation = envs.env.reset()
         print(envs.env)
         if opts.Progressive_Refinement:
@@ -142,31 +129,25 @@ def TopOpt_Designing(User_Conditions,opts, envs):
                 observation_v=observation_v_
                 observation_h=observation_h_
                 observation_vh=observation_vh_
-            if opts.Load_Checkpoints and not Time_Trial:
-                envs.env.render()
+            if opts.Load_Checkpoints and not Time_Trial:   envs.env.render()
         toc=time.perf_counter()
 
         if Time_Trial and not opts.From_App:
-            print('It took '+str(round(toc-Start_Time_Trial,1))+' seconds to complete this time trial.')
-    
+            print('It took '+str(round(toc-Start_Time_Trial,1))+' seconds to complete this time trial.')    
         if opts.Load_Checkpoints:
             #Removed_Num=Mesh_Triming(env,Main_EX,Main_EY)   
             App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
             return App_Plot
-        if not opts.Load_Checkpoints:
-            Total_Loss=agent.learn()
-        else:
-            Total_Loss=1
+        if not opts.Load_Checkpoints:Total_Loss=agent.learn()
+        else:    Total_Loss=1
         score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent=Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,score,opts.Main_EX,opts.Main_EY,i)
     
-        if opts.n_games!=1:
-            envs.env.reset_conditions()
+        if opts.n_games!=1: envs.env.reset_conditions()
         if avg_score>=best_score and not opts.Load_Checkpoints: 
             '''If the average score of the previous runs is better than 
             the previous best average then the new model should be saved'''
             agent.save_models()
-            best_score=avg_score
-    
+            best_score=avg_score   
         
         if not opts.Load_Checkpoints:
             TrialData=TrialData.append({'Episode': i, 'Reward': score,'Successfull Steps': Succ_Steps,
