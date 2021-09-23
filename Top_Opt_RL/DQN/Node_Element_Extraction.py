@@ -4,7 +4,7 @@ Created on Thu Aug 12 11:42:39 2021
 
 @author: nbrow
 """
-import FEA_SOLVER_GENERAL
+from Top_Opt_RL.DQN .FEA_SOLVER_GENERAL import rectangularmesh
 import numpy as np
 def LC_Nodes(Load_Element,Load_Type,Load_Direction,Lx,Ly,Elements_X,Elements_Y,Counting,Node_Location):
     '''Given the loaded element and loading direction, 
@@ -15,7 +15,7 @@ def LC_Nodes(Load_Element,Load_Type,Load_Direction,Lx,Ly,Elements_X,Elements_Y,C
   
 
     Go_List,Elem_List,Bottom_List,Top_List,Left_List,Right_List=Element_Lists(Elements_X,Elements_Y)
-    Load_Nodes=FEA_SOLVER_GENERAL.rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
+    Load_Nodes=rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
     if Load_Element in Bottom_List:
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[1]
@@ -79,7 +79,7 @@ def BC_Nodes(Load_Element,Lx,Ly,Elements_X,Elements_Y):
     corresponding nodes depending on where it's located'''
     
     _,_,Bottom_List,Top_List,Left_List,Right_List=Element_Lists(Elements_X,Elements_Y)
-    Load_Nodes=FEA_SOLVER_GENERAL.rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
+    Load_Nodes=rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
     if Load_Element in Bottom_List:
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[1]

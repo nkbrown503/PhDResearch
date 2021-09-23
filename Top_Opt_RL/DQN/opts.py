@@ -8,7 +8,7 @@ Created on Mon Aug 16 10:17:32 2021
 
 import argparse 
 
-def parse_opts():
+def parse_opts(args_in = None):
     parser=argparse.ArgumentParser()
     ''' Parameters invovled with generic environment building'''
     parser.add_argument('--Main_EX',
@@ -114,6 +114,11 @@ def parse_opts():
                     default=0.25,
                     type=float,
                     help='Final Volume Fraction ')
+
+    parser.add_argument('--SC',
+                    default=10,
+                    type=float,
+                    help='Stress constraint, between 0 and 2 ')
     
     parser.add_argument('--P_Norm',
                     default=10,
@@ -127,8 +132,47 @@ def parse_opts():
                        default='DDQN_TopOpt_Generalized_CNN_4L_6by6',
                        type=str,
                        help='When testing, what name is your NN weights saved under')
+    parser.add_argument('--Progressive_Refinement',
+                       default=True,
+                       type=bool)
+    parser.add_argument('--LC',
+                       default=False,
+                       type=bool,
+                       help="type in loading conditions manually")
+    parser.add_argument('--Load_Checkpoints',
+                       default=True,
+                       type=bool,
+                       help="Load Checkouts. ")
+    
+    parser.add_argument('--VF_S',
+                       default=0,
+                       type=int,
+                       help="Use vol fraction constraint [0] or stress constraint [1]")
+    parser.add_argument('--Time_Trial',
+                       default=True,
+                       type=bool,
+                       help="Perform Time Trial")
+    parser.add_argument('--configfile',
+                       default='config.json',
+                       type=str,
+                       help="name of config file. ")
+    parser.add_argument('--From_App',
+                       default=True,
+                       type=bool,
+                       help="True if being called by an external app. Not sure this is needed. ")
+    parser.add_argument('--base_folder',
+                       default=r".",
+                       type=str,
+                       help="Folder where to find saved files. Helpful if not running the app from the main folder.  ")
  
-    args = parser.parse_args()
+
+    if args_in:
+        # print(f"Using args {args_in}")
+        # all_defaults = {}
+        # for key in vars(args):
+        #     all_defaults[key] = parser.get_default(key)
+        args = parser.parse_args("")
+    else: args = parser.parse_args()
 
     return args
     

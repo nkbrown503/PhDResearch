@@ -7,7 +7,7 @@ Created on Thu Aug 12 15:34:50 2021
 import numpy as np
 import math
 from scipy.signal import convolve2d
-from Node_Element_Extraction import BC_Nodes,LC_Nodes
+from Top_Opt_RL.DQN. Node_Element_Extraction import BC_Nodes,LC_Nodes
 def action_flip(action,Elements_X,Elements_Y):
     
     '''Given an element that is being loaded, produce the 

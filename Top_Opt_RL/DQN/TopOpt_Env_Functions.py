@@ -8,13 +8,14 @@ from gym import Env
 from gym.spaces import Discrete
 import numpy as np
 import itertools
-from Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
-import FEA_SOLVER_GENERAL
+from Top_Opt_RL.DQN.Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
+from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import FEASolve, isolate_largest_group_original, rectangularmesh
 import math
 import copy
-from Matrix_Transforms import Condition_Transform
+from Top_Opt_RL.DQN. Matrix_Transforms import Condition_Transform
 import random
 import sys
+import os
  
 class TopOpt_Gen(Env):
     def __init__(self,Elements_X,Elements_Y,Vol_Frac,SC,opts):
@@ -38,14 +39,14 @@ class TopOpt_Gen(Env):
         rs_place=self.VoidCheck[int(action)]
         self.VoidCheck[int(action)]=0
         ElementMat=np.reshape(self.VoidCheck,(self.EX,self.EY))
-        SingleCheck=FEA_SOLVER_GENERAL.isolate_largest_group_original(ElementMat)
+        SingleCheck=isolate_largest_group_original(ElementMat)
         It=list(self.VoidCheck).count(0)
         if rs_place==1 and action not in self.BC and SingleCheck[1]==True:
             done=False
             if It>=math.ceil((self.EX*self.EY)*(1-self.Vol_Frac)) and load_checkpoint or It>=math.ceil((self.EX*self.EY)*(1-self.Vol_Frac)) and PR:
                 done=True
             if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
-                Run_Results=FEA_SOLVER_GENERAL.FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+                Run_Results=FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
                 self.Max_SE_Ep=np.max(Run_Results[1])
                 if (env.P_Norm/(sum(sum([number**self.p for number in np.reshape(Run_Results[2],(1,self.EX*self.EY))]))**(1/self.p)))<(1-float(self.SC)):
 
@@ -74,7 +75,7 @@ class TopOpt_Gen(Env):
         else:
             """If the removed block has already been removed, leads to a non-singular
             body or one of the Boundary condition blocks, the agent should be severely punished (-1)"""
-            Run_Results=FEA_SOLVER_GENERAL.FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+            Run_Results=FEASolve(list(self.VoidCheck),self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
             self.Max_SE_Ep=np.max(Run_Results[1])
             self.Stress_state=Run_Results[3]
             self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
@@ -115,7 +116,7 @@ class TopOpt_Gen(Env):
         
     def reset(self):
 
-        self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+        self.Results=FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
         self.Stress_state=self.Results[3]
         self.P_Norm=sum(sum([number**self.p for number in np.reshape(self.Results[2],(1,self.EX*self.EY))]))**(1/self.p)        #self.Stress_state=list(np.array(self.Stress_state)
         self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
@@ -172,7 +173,7 @@ class TopOpt_Gen(Env):
             for BCS in range(0,len(self.BC_Elements)):
                 self.BC_state[int(self.BC_Elements[BCS])]=1
             self.BC_state=np.reshape(self.BC_state,(self.EX,self.EY))
-            self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+            self.Results=FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
             self.Max_SE_Tot=self.Results[1]
     def primer_cond(self,EX,EY):
          self.BC=[]
@@ -186,7 +187,7 @@ class TopOpt_Gen(Env):
          for LCS in range(0,len(self.LC_Elements)):
                 self.LC_state[int(self.LC_Elements[LCS])]=1
          self.LC_state=np.reshape(self.LC_state,(EX,EY))
-         self.Results=FEA_SOLVER_GENERAL.FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
+         self.Results=FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
          self.Max_SE_Tot=np.max(self.Results[1])
 
 def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,opts,Small_EX,Small_EY,Time_Trial,From_App,FEA_Skip):
@@ -288,7 +289,7 @@ def App_Inputs(env,opts,User_Conditions):
     for BCS in range(0,len(env.BC_Elements)):
         env.BC_state[int(env.BC_Elements[BCS])]=1
     env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.Max_SE_Tot=np.max((FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
     
     
 def User_Inputs(env,opts):
@@ -344,7 +345,7 @@ def User_Inputs(env,opts):
     for BCS in range(0,len(env.BC_Elements)):
         env.BC_state[int(env.BC_Elements[BCS])]=1
     env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.Max_SE_Tot=np.max((FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
     
     return 
 def Testing_Inputs(env,opts):
@@ -354,7 +355,7 @@ def Testing_Inputs(env,opts):
     env.BC_Nodes=np.array([0,0,opts.Main_EX*opts.Main_EY,opts.Main_EX*opts.Main_EY])
     env.LC_Nodes=np.array([opts.Main_EX+(opts.Main_EX+1)*(opts.Main_EY+1),opts.Main_EX-1+(opts.Main_EX)*(opts.Main_EY+1)])
 
-    env.LC_Elements=np.array([np.where(FEA_SOLVER_GENERAL.rectangularmesh(opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY)[1]==env.LC_Nodes[0]-((opts.Main_EX+1)*(opts.Main_EY+1)))[0][0]])
+    env.LC_Elements=np.array([np.where(rectangularmesh(opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY)[1]==env.LC_Nodes[0]-((opts.Main_EX+1)*(opts.Main_EY+1)))[0][0]])
     env.BC_Elements=[0,(opts.Main_EX)*(opts.Main_EY-1)]
     env.LC_state=list(np.zeros((1,(opts.Main_EX)*(opts.Main_EY)))[0])
     env.LC_state[env.LC_Elements[0]]=1
@@ -368,7 +369,7 @@ def Testing_Inputs(env,opts):
     env.BC_state[env.BC_Elements[0]]=1
     env.BC_state[env.BC_Elements[1]]=1
     env.BC_state=np.reshape(env.BC_state,(opts.Main_EX,opts.Main_EY))
-    env.Max_SE_Tot=np.max((FEA_SOLVER_GENERAL.FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
+    env.Max_SE_Tot=np.max((FEASolve(env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)[1]))
 
 def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,From_App,Fixed):
     '''Function that outputs the results of a testing trial. The results include
@@ -398,7 +399,7 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
             env_primer.render()
             env_primer2.render()
         env.render()
-        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        Final_Results=FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         print('Strain Energy for Final Topology: '+str(round(np.max(Final_Results[1]),1)))
         p=opts.P_Norm
         print('Maximum P_Norm Stress Perc Increase: '+str(round(1-(env.P_Norm/sum(sum([number**p for number in np.reshape(Final_Results[2],(1,env.EX*env.EY))]))**(1/p)),2)))
@@ -430,7 +431,7 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
         plt.show()
         App_Plot={}
     else:
-        Final_Results=FEA_SOLVER_GENERAL.FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
+        Final_Results=FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         Mat_Plot=copy.deepcopy(env.VoidCheck)
         App_Plot={}
         App_Plot['Topology']=[]
@@ -469,7 +470,9 @@ def Reward_Surface(opts):
                          np.linspace(0, 1, ny))
     GoG = poly_matrix(xx.ravel(), yy.ravel(), ordr)
     zz = np.reshape(np.dot(GoG, m), xx.shape)
-    with open('Trial_Data/Reward_Data.npy','rb') as f:
+    this_dir, this_filename = os.path.split(__file__)
+    base_folder =this_dir
+    with open(base_folder+'/Trial_Data/Reward_Data.npy','rb') as f:
         Data = np.load(f)
     X_Data=Data[:,0]
     Y_Data=Data[:,1]

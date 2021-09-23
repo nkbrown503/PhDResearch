@@ -9,6 +9,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.math import argmax
 import tensorflow.keras as keras 
 from tensorflow.keras import layers,models 
+import os
 class Agent():
     def __init__(self,env,opts,Increase,n_actions,input_dims,epsilon,
                  filename_save,filename_load,EX,EY):
@@ -28,8 +29,9 @@ class Agent():
         self.memory = ReplayBuffer(opts.mem_size, input_dims)
         self.q_eval = DuelingDeepQNetwork(self.EX*self.EY,Increase)
         self.q_next = DuelingDeepQNetwork(self.EX*self.EY,Increase)
-        self.checkpoint_file_save='NN_Weights/'+filename_save+'_NN_weights'
-        self.checkpoint_file_load='NN_Weights/'+filename_load+'_NN_weights'
+        this_dir, this_filename = os.path.split(__file__)
+        self.checkpoint_file_save=this_dir+'/NN_Weights/'+filename_save+'_NN_weights'
+        self.checkpoint_file_load=this_dir+'/NN_Weights/'+filename_load+'_NN_weights'
         self.q_eval.compile(optimizer=Adam(learning_rate=self.lr),
                             loss='mean_squared_error')
         # just a formality, won't optimize network
