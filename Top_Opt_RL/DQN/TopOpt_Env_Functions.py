@@ -4,7 +4,7 @@ Created on Thu Aug 12 12:00:02 2021
 
 @author: nbrow
 """
-from PhDResearch.Top_Opt_RL.DQN.RL_Necessities import Agent
+from Top_Opt_RL.DQN.RL_Necessities import Agent
 from gym import Env
 from gym.spaces import Discrete
 import numpy as np
