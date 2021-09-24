@@ -4,6 +4,7 @@ Created on Thu Aug 12 12:00:02 2021
 
 @author: nbrow
 """
+from git.PhDResearch.Top_Opt_RL.DQN.RL_Necessities import Agent
 from gym import Env
 from gym.spaces import Discrete
 import numpy as np
@@ -190,7 +191,7 @@ class TopOpt_Gen(Env):
          self.Results=FEASolve(self.VoidCheck,self.Lx,self.Ly,self.EX,self.EY,self.LC_Nodes,self.Load_Directions,self.BC_Nodes,Stress=True)
          self.Max_SE_Tot=np.max(self.Results[1])
 
-def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,opts,Small_EX,Small_EY,Time_Trial,From_App,FEA_Skip):
+def Prog_Refine_Act(agent_primer: Agent,env,env_primer,load_checkpoint,Testing,opts,Small_EX,Small_EY,Time_Trial,From_App,FEA_Skip):
     '''This function will deliver the optimal topology of the smaller sized environment.
     This final topology will then be transformed into the equivalent topology at the 
     larger selected size. This larger topology will then be based back to the main function

@@ -9,6 +9,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.math import argmax
 import tensorflow.keras as keras 
 from tensorflow.keras import layers,models 
+import tensorflow as tf
 import os
 class Agent():
     def __init__(self,env,opts,Increase,n_actions,input_dims,epsilon,
@@ -120,7 +121,8 @@ class DuelingDeepQNetwork(keras.Model):
         self.model.add(layers.Flatten())
     
     def call(self, state):
-        x = self.model(state)
+        # with tf.stop_gradient:
+        x = tf.stop_gradient(self.model(state))
     
         #V = self.model_V(x)
         #A = self.model_A(x)
