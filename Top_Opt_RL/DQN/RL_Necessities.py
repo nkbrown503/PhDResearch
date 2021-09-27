@@ -106,7 +106,7 @@ class Agent():
 
     def load_models(self):
         print('... loading models ...')
-        self.q_eval.load_weights(self.checkpoint_file_load)
+        self.q_eval.load_weights(self.checkpoint_file_load).expect_partial()
         
 class DuelingDeepQNetwork(keras.Model):
     def __init__(self, n_actions,Increase):

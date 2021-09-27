@@ -97,13 +97,11 @@ def TopOpt_Designing(User_Conditions,opts, envs):
             #Progressive Refinement #2 Going for Intermediate to Final Mesh Size
             envs.env_primer2.VoidCheck=Mesh_Transform(opts.PR_EX,opts.PR_EY,opts.PR2_EX,opts.PR2_EY,envs.env_primer.VoidCheck)
             if opts.From_App:
-                del envs.env_primer
                 del agent_primer
             Prog_Refine_Act(agent_primer2,envs.env,envs.env_primer2,opts.Load_Checkpoints,Testing,opts,opts.PR2_EX,opts.PR2_EY,Time_Trial,opts.From_App,FEA_Skip=1)
             #This outcome will now be used as the final mesh Size 
             envs.env.VoidCheck=Mesh_Transform(opts.PR2_EX,opts.PR2_EY,opts.Main_EX,opts.Main_EY,envs.env_primer2.VoidCheck)
             if opts.From_App:
-                del envs.env_primer
                 del agent_primer2
             #Removed_Num=Mesh_Triming(env_primer,PR_EX,PR_EY)
             #Uncomment the above line if you want to incorporate mesh trimming
@@ -142,10 +140,7 @@ def TopOpt_Designing(User_Conditions,opts, envs):
             print('It took '+str(round(toc-Start_Time_Trial,1))+' seconds to complete this time trial.')    
         if opts.Load_Checkpoints:
             #Removed_Num=Mesh_Triming(env,Main_EX,Main_EY) 
-            if opts.From_App:
-                App_Plot=Testing_Info(envs.env,_,_,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
-            else:
-                App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
+            App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
             
             return App_Plot
         if not opts.Load_Checkpoints:Total_Loss=agent.learn()
