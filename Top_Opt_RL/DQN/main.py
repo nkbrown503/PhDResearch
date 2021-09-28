@@ -188,8 +188,9 @@ class EnviromentsRL:
 tic=time.perf_counter()
 if __name__=='__main__':
     opts=parse_opts()   
+
     User_Conditions = json.load(open(opts.configfile) ) if opts.From_App else None  
-    opts.Vol_Frac_3=float(User_Conditions['volfraction'])
+    if opts.From_App: opts.Vol_Frac_3=float(User_Conditions['volfraction'])
     envs = EnviromentsRL(opts)  
     App_Plot=TopOpt_Designing(User_Conditions,opts, envs)
     json.dump( App_Plot, open( "App_Data.json", 'w' ) )

@@ -252,7 +252,7 @@ def App_Inputs(env,opts,User_Conditions):
 
     env.LC_Elements=np.append(env.LC_Elements,Right).astype('int')
     env.Load_Types=np.append(env.Load_Types,[1]*len(Right)).astype('int')
-    env.Load_Directions=np.append(env.Load_Directions,[1]*len(Right)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Right)).astype('int')
     
     env.LC_Elements=np.append(env.LC_Elements,Left).astype('int')
     env.Load_Types=np.append(env.Load_Types,[1]*len(Left)).astype('int')
@@ -260,7 +260,7 @@ def App_Inputs(env,opts,User_Conditions):
     
     env.LC_Elements=np.append(env.LC_Elements,Up).astype('int')
     env.Load_Types=np.append(env.Load_Types,[0]*len(Up)).astype('int')
-    env.Load_Directions=np.append(env.Load_Directions,[1]*len(Up)).astype('int')
+    env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Up)).astype('int')
     
     env.LC_Elements=np.append(env.LC_Elements,Down).astype('int')
     env.Load_Types=np.append(env.Load_Types,[0]*len(Down)).astype('int')
@@ -327,7 +327,7 @@ def User_Inputs(env,opts):
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0]+(opts.Main_EX+1)*(opts.Main_EY+1))
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1]+(opts.Main_EX+1)*(opts.Main_EY+1))
         else:
-            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
+            LC_New_Nodes=LC_Nodes(int(env.LC_Elements[Counting]),env.Load_Types[Counting],env.Load_Directions[Counting],env.Lx,env.Ly,env.EX,env.EY,Counting,Node_Location=True)
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[0])
             env.LC_Nodes=np.append(env.LC_Nodes,LC_New_Nodes[1])
     for Counting in range(0,BC_Count):
