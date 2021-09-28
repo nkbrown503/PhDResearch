@@ -14,6 +14,7 @@ import time
 import json
 # import FEA_SOLVER_GENERAL
 from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import *
+#from FEA_SOLVER_GENERAL import *
 # from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import FEA_SOLVER_GENERAL
 
 from Top_Opt_RL.DQN.opts import parse_opts
@@ -166,18 +167,19 @@ def TopOpt_Designing(User_Conditions,opts, envs):
 class EnviromentsRL:
     def __init__(self, opts):
         if opts.Load_Checkpoints:
-            Vol_Frac_3=opts.Vol_Frac_3 
+            SC=opts.SC
             if opts.VF_S==0: #If the user wants to set a final volume fraction, set the intermediate volume fractions accordingly
+                Vol_Frac_3=opts.Vol_Frac_3
                 Vol_Frac_2=1-((1-Vol_Frac_3)/1.5)
                 Vol_Frac_1=1-((1-Vol_Frac_3)/2.5)
             else:
                 Vol_Frac_2=opts.Vol_Frac_2
                 Vol_Frac_1=opts.Vol_Frac_1
+                Vol_Frac_3=opts.Vol_Frac_3 
         else:
             Vol_Frac_3=opts.Vol_Frac_3
-        SC=opts.SC
-        Vol_Frac_1=opts.Vol_Frac_1
-        Vol_Frac_2=opts.Vol_Frac_2
+            Vol_Frac_1=opts.Vol_Frac_1
+            Vol_Frac_2=opts.Vol_Frac_2
         self.env = TopOpt_Gen(opts.Main_EX,opts.Main_EY,Vol_Frac_3,SC,opts)
         self.env_primer= TopOpt_Gen(opts.PR_EX,opts.PR_EY,Vol_Frac_1,SC,opts)
         self.env_primer2=TopOpt_Gen(opts.PR2_EX,opts.PR2_EY,Vol_Frac_2,SC,opts)
@@ -187,6 +189,7 @@ tic=time.perf_counter()
 if __name__=='__main__':
     opts=parse_opts()   
     User_Conditions = json.load(open(opts.configfile) ) if opts.From_App else None  
+    opts.Vol_Frac_3=float(User_Conditions['volfraction'])
     envs = EnviromentsRL(opts)  
     App_Plot=TopOpt_Designing(User_Conditions,opts, envs)
     json.dump( App_Plot, open( "App_Data.json", 'w' ) )
