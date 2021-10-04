@@ -147,26 +147,7 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
 
         App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
             
-        #return App_Plot
-        if not opts.Load_Checkpoints:Total_Loss=agent.learn()
-        else:    Total_Loss=1
-        score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent=Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,score,opts.Main_EX,opts.Main_EY,i)
-    
-        if opts.n_games!=1: envs.env.reset_conditions()
-        if avg_score>=best_score and not opts.Load_Checkpoints: 
-            '''If the average score of the previous runs is better than 
-            the previous best average then the new model should be saved'''
-            agent.save_models()
-            best_score=avg_score   
-        
-        if not opts.Load_Checkpoints:
-            TrialData=TrialData.append({'Episode': i, 'Reward': score,'Successfull Steps': Succ_Steps,
-                    'Percent Successful':Percent_Succ,'Avg Loss':avg_Loss,'Epsilon': agent.epsilon, 'Time':round((toc-tic),3)}, ignore_index=True)
-        print('Episode ', i, '  Score %.2f' % score,'  Avg_score %.2f' % avg_score,'  Avg Steps %.0f' % avg_succ,'   Avg Percent %.0f' %(avg_percent*100),'     Avg Loss %.2f' %avg_Loss,'  Ep.  %.2f' %agent.epsilon,'  Time (s) %.0f' %(toc-tic))
-        if i%100==0 and not opts.Load_Checkpoints and i>0:
-            TrialData.to_pickle('Trial_Data/'+opts.filename_save +'_TrialData.pkl')
-            plot_learning_curve(range(0,i+1), score_history, figure_file)
-        # return App_Plot
+  
      
 class EnviromentsRL:
     def __init__(self, opts):
