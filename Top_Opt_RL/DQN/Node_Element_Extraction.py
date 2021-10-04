@@ -12,24 +12,18 @@ def LC_Nodes(Load_Element,Load_Type,Load_Direction,Lx,Ly,Elements_X,Elements_Y,C
      and selects an element not on the exterior edges of the shape
      they will be prompted to select the top/right/bottom/left nodes 
      of the selected element '''
-    print('LC---')
-    print(Load_Element)
     Go_List,Elem_List,Bottom_List,Top_List,Left_List,Right_List=Element_Lists(Elements_X,Elements_Y)
     Load_Nodes=rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
     if Load_Element in Bottom_List:
-        print('BL')
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[1]
     if Load_Element in Top_List:
-        print('TL')
         Loaded_Node=Load_Nodes[2]
         Loaded_Node2=Load_Nodes[3]
     if Load_Element in Right_List:
-        print('RL')
         Loaded_Node=Load_Nodes[1]
         Loaded_Node2=Load_Nodes[2]
     if Load_Element in Left_List:
-        print('LL')
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[3]
     if Load_Element in Top_List and Load_Element in Right_List:
@@ -75,31 +69,30 @@ def LC_Nodes(Load_Element,Load_Type,Load_Direction,Lx,Ly,Elements_X,Elements_Y,C
             Loaded_Node2=Load_Nodes[0]
     Loaded_Node=int(Loaded_Node)
     Loaded_Node2=int(Loaded_Node2)   
-    print(Loaded_Node)
-    print(Loaded_Node2)
+
     return Loaded_Node, Loaded_Node2
 
 def BC_Nodes(Load_Element,Lx,Ly,Elements_X,Elements_Y):
-    print('BC----')
+
     ''''Given the Boundary Condition Element,produce the 
     corresponding nodes depending on where it's located'''
-    print(Load_Element)
+
     _,_,Bottom_List,Top_List,Left_List,Right_List=Element_Lists(Elements_X,Elements_Y)
     Load_Nodes=rectangularmesh(Lx,Ly,Elements_X,Elements_Y)[1][Load_Element,:]
     if Load_Element in Bottom_List:
-        print('BL')
+     
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[1]
     if Load_Element in Top_List:
-        print('TL')
+  
         Loaded_Node=Load_Nodes[2]
         Loaded_Node2=Load_Nodes[3]
     if Load_Element in Right_List:
-        print('RL')
+      
         Loaded_Node=Load_Nodes[1]
         Loaded_Node2=Load_Nodes[2]
     if Load_Element in Left_List:
-        print('LL')
+       
         Loaded_Node=Load_Nodes[0]
         Loaded_Node2=Load_Nodes[3]
     if Load_Element in Top_List and Load_Element in Right_List:

@@ -7,8 +7,8 @@ Created on Mon Aug 16 10:17:32 2021
 
 
 import argparse 
-
 def parse_opts(args_in = None):
+  
     parser=argparse.ArgumentParser()
     ''' Parameters invovled with generic environment building'''
     parser.add_argument('--Main_EX',
@@ -148,18 +148,26 @@ def parse_opts(args_in = None):
                        default=0,
                        type=int,
                        help="Use vol fraction constraint [0] or stress constraint [1]")
+    
+    parser.add_argument('--Min_Dist',
+                        default=0,
+                        type=int,
+                        help="The 0 value serves as a place holder to represent the minimum distance between the bounded and loaded elements in a given load case.")
     parser.add_argument('--Time_Trial',
                        default=True,
                        type=bool,
                        help="Perform Time Trial")
+    
     parser.add_argument('--configfile',
                        default='config.json',
                        type=str,
                        help="name of config file. ")
+    
     parser.add_argument('--From_App',
                        default=True,
                        type=bool,
                        help="True if being called by an external app. Not sure this is needed. ")
+
     parser.add_argument('--base_folder',
                        default=r".",
                        type=str,

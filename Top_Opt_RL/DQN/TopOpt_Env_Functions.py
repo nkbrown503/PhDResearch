@@ -231,7 +231,34 @@ def Prog_Refine_Act(agent_primer,env,env_primer,load_checkpoint,Testing,opts,Sma
     Last_Reward=0
     if Testing and not From_App:
         env_primer.render()
-def App_Inputs(env,opts,User_Conditions):
+def Min_Dist_Calc(UC_,opts):
+    
+    BC=[int(x)-1 for x in UC_['bcs']]
+    Right=[int(x)-1 for x in UC_['rights']]
+    Left=[int(x)-1 for x in UC_['lefts']]
+    Up=[int(x)-1 for x in UC_['ups']]
+    Down=[int(x)-1 for x in UC_['downs']]
+    Elements=[]
+    Elements=np.append(Elements,Right)
+    Elements=np.append(Elements,Left)
+    Elements=np.append(Elements,Up)
+    Elements=np.append(Elements,Down)
+    Elements=np.append(Elements,BC)
+
+    Len_Mat=[]
+    for i in range(0,len(Elements)):
+        for j in range(i+1,len(Elements)):
+            Row_E1=math.floor(Elements[i]/opts.Main_EX)
+            Col_E1=math.ceil(math.modf(Elements[i]/opts.Main_EX)[0]*opts.Main_EX)
+            Row_E2=math.floor(Elements[j]/opts.Main_EX)
+            Col_E2=math.ceil(math.modf(Elements[j]/opts.Main_EX)[0]*opts.Main_EX)
+            E2_E1=abs(Row_E2-Row_E1)+abs(Col_E2-Col_E1)
+            Len_Mat=np.append(Len_Mat,E2_E1)
+    Len_Mat=list(Len_Mat)
+    while len(Len_Mat)>len(Elements):
+        Len_Mat.remove(max(Len_Mat))
+    return sum(Len_Mat)
+def App_Inputs(env,env_primer,env_primer2,opts,User_Conditions):
     '''To improve the adaptability of this method, a web-app has been developed
     using Heroku The web-app will provide an interactive environment for the user
     to select the boundary and loading conditions. The BCs and LCs will be imported as 
@@ -249,7 +276,14 @@ def App_Inputs(env,opts,User_Conditions):
     Up=[int(x)-1 for x in User_Conditions['ups']]
     Down=[int(x)-1 for x in User_Conditions['downs']]
     env.BC_Elements=np.append(env.BC_Elements,BC)
-
+    env.Vol_Frac=User_Conditions['volfraction']
+    Min_Dist=Min_Dist_Calc(User_Conditions,opts)
+    env_primer.Vol_Frac=env.Vol_Frac+3*(Min_Dist/(opts.Main_EX*opts.Main_EY))
+    if env_primer.Vol_Frac>0.7:
+        env_primer.Vol_Frac=0.7
+    env_primer2.Vol_Frac=env.Vol_Frac+2*(Min_Dist/(opts.Main_EX*opts.Main_EY))
+    if env_primer2.Vol_Frac>0.5:
+        env_primer2.Vol_Frac=0.5
     env.LC_Elements=np.append(env.LC_Elements,Right).astype('int')
     env.Load_Types=np.append(env.Load_Types,[1]*len(Right)).astype('int')
     env.Load_Directions=np.append(env.Load_Directions,[-1]*len(Right)).astype('int')
@@ -431,14 +465,13 @@ def Testing_Info(env,env_primer,env_primer2,opts,score,Progressive_Refinement,Fr
         plt.show()
         App_Plot={}
     else:
-        Final_Results=FEASolve(list(env.VoidCheck),opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,env.LC_Nodes,env.Load_Directions,env.BC_Nodes,Stress=True)
         Mat_Plot=copy.deepcopy(env.VoidCheck)
         App_Plot={}
         App_Plot['Topology']=[]
         App_Plot['SE']=[]
         App_Plot['VF']=[]
         App_Plot['Topology'].append([str(x) for x in Mat_Plot])
-        App_Plot['SE'].append(str(round(np.max(Final_Results[1]),1)))
+        App_Plot['SE'].append(str(round(env.Max_SE_Ep,1)))
         App_Plot['VF'].append(str(round(1-(list(env.VoidCheck).count(0)/(env.EX*env.EY)),3)))
     return App_Plot
         

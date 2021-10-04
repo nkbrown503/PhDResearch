@@ -12,14 +12,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 import time
 import json
+import math
 # import FEA_SOLVER_GENERAL
 from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import *
 #from FEA_SOLVER_GENERAL import *
 # from Top_Opt_RL.DQN.FEA_SOLVER_GENERAL import FEA_SOLVER_GENERAL
 
 from Top_Opt_RL.DQN.opts import parse_opts
-from Top_Opt_RL.DQN.TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs,App_Inputs, Testing_Inputs, Testing_Info     
-from Top_Opt_RL.DQN.Matrix_Transforms import obs_flip, action_flip, Mesh_Transform
+from Top_Opt_RL.DQN.TopOpt_Env_Functions import TopOpt_Gen, Prog_Refine_Act,User_Inputs,App_Inputs, Testing_Inputs, Testing_Info, Min_Dist_Calc  
+from Top_Opt_RL.DQN.Matrix_Transforms import obs_flip, action_flip, Mesh_Transform, Mesh_Triming 
 from Top_Opt_RL.DQN.RL_Necessities import Agent 
 def plot_learning_curve(x, scores, figure_file):
     import matplotlib.pyplot as plt
@@ -46,7 +47,7 @@ def Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,
     avg_percent=np.mean(per_history[-50:])
     return score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent
 
-def TopOpt_Designing(User_Conditions,opts, envs):
+def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
     Time_Trial = opts.Time_Trial
     if opts.Progressive_Refinement:
         agent_primer= Agent(envs.env_primer,opts,Increase=False,filename_save=opts.filename_save+str(opts.PR_EX)+'by'+str(opts.PR_EY),
@@ -76,8 +77,10 @@ def TopOpt_Designing(User_Conditions,opts, envs):
         Testing = False #Used to render the environment and track learning of the agent 
         if opts.Load_Checkpoints:
             'If the user wants to test the agent, the user will be prompted to input BC and LC elements'
-            if opts.From_App:  App_Inputs(envs.env,opts,User_Conditions)
+            if opts.From_App:  App_Inputs(envs.env,envs.env_primer,envs.env_primer2,opts,User_Conditions)
+
             else:  User_Inputs(envs.env,opts)
+
         done = False
         score = 0    
         if i%10==0 and i>=100:
@@ -116,7 +119,7 @@ def TopOpt_Designing(User_Conditions,opts, envs):
                 activations = get_activations(agent.q_eval.model, observation.reshape(-1,opts.Main_EX,opts.Main_EY,3))
                 display_activations(activations, save=False)
             action = agent.choose_action(observation,opts.Load_Checkpoints,Testing)
-            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=3,PR=False)
+            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=2,PR=False)
             if not opts.Load_Checkpoints:
                 observation_v_,observation_h_,observation_vh_=obs_flip(observation_,opts.Main_EX,opts.Main_EY)
                 action_v,action_h,action_vh=action_flip(action,opts.Main_EX,opts.Main_EY)
@@ -125,6 +128,8 @@ def TopOpt_Designing(User_Conditions,opts, envs):
                 agent.store_transition(observation_h,action_h,reward,observation_h_,done)
                 agent.store_transition(observation_vh,action_vh,reward,observation_vh_,done)
             score += reward
+            App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
+            my_call_back_functions[0](App_Plot)
             Last_Reward=reward
             if Testing and not Time_Trial:
                 envs.env.render()
@@ -139,11 +144,10 @@ def TopOpt_Designing(User_Conditions,opts, envs):
 
         if Time_Trial and not opts.From_App:
             print('It took '+str(round(toc-Start_Time_Trial,1))+' seconds to complete this time trial.')    
-        if opts.Load_Checkpoints:
-            #Removed_Num=Mesh_Triming(env,Main_EX,Main_EY) 
-            App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
+
+        App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
             
-            return App_Plot
+        #return App_Plot
         if not opts.Load_Checkpoints:Total_Loss=agent.learn()
         else:    Total_Loss=1
         score_history,per_history,succ_history,Loss_history,Succ_Steps,Percent_Succ,avg_succ,avg_score,avg_Loss,avg_percent=Data_History(score_history,per_history,succ_history,Loss_history,Total_Loss,score,opts.Main_EX,opts.Main_EY,i)
@@ -168,11 +172,7 @@ class EnviromentsRL:
     def __init__(self, opts):
         if opts.Load_Checkpoints:
             SC=opts.SC
-            if opts.VF_S==0: #If the user wants to set a final volume fraction, set the intermediate volume fractions accordingly
-                Vol_Frac_3=opts.Vol_Frac_3
-                Vol_Frac_2=1-((1-Vol_Frac_3)/1.5)
-                Vol_Frac_1=1-((1-Vol_Frac_3)/2.5)
-            else:
+            if opts.VF_S==0 and opts.From_App: #If the user wants to set a final volume fraction, set the intermediate volume fractions accordingly
                 Vol_Frac_2=opts.Vol_Frac_2
                 Vol_Frac_1=opts.Vol_Frac_1
                 Vol_Frac_3=opts.Vol_Frac_3 
@@ -188,9 +188,7 @@ class EnviromentsRL:
 tic=time.perf_counter()
 if __name__=='__main__':
     opts=parse_opts()   
-
     User_Conditions = json.load(open(opts.configfile) ) if opts.From_App else None  
-    if opts.From_App: opts.Vol_Frac_3=float(User_Conditions['volfraction'])
     envs = EnviromentsRL(opts)  
     App_Plot=TopOpt_Designing(User_Conditions,opts, envs)
     json.dump( App_Plot, open( "App_Data.json", 'w' ) )

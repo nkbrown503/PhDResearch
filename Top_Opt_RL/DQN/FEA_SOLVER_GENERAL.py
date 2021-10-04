@@ -1,9 +1,8 @@
 
 import numpy as np
-import skimage.measure as measure
 'Define the Function that creates the rectangular mesh'
-
-def label( x): return measure.label(x, connectivity=1)
+from skimage.measure import label
+def label_( x): return label(x, connectivity=1)
 def get_zero_label(d, labels):
     for i in range(d.shape[0]):
         for j in range(d.shape[1]):
@@ -14,7 +13,7 @@ def isolate_largest_group_original(x):
     """Isolates the largest group. 
     this original version has problems with periodicity. The v2 version fixes this. """
     x_original = np.copy(x)    
-    labels= label(x)
+    labels= label_(x)
     zerolabel=get_zero_label(x,labels)
     group_names = np.unique(labels)      
     group_names = [g for g in group_names if g!=zerolabel]   
