@@ -129,7 +129,7 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
                 agent.store_transition(observation_vh,action_vh,reward,observation_vh_,done)
             score += reward
             App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
-            my_call_back_functions[0](App_Plot)
+            _=[fn(App_Plot) for fn in my_call_back_functions]
             Last_Reward=reward
             if Testing and not Time_Trial:
                 envs.env.render()
@@ -140,6 +140,9 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
                 observation_h=observation_h_
                 observation_vh=observation_vh_
             if opts.Load_Checkpoints and not Time_Trial:   envs.env.render()
+        App_Plot=Testing_Info(envs.env,envs.env_primer,envs.env_primer2,opts,score,opts.Progressive_Refinement,opts.From_App,Fixed=True)
+        _=[fn(App_Plot) for fn in my_call_back_functions]
+        return App_Plot        
         toc=time.perf_counter()
 
         if Time_Trial and not opts.From_App:
