@@ -107,7 +107,7 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
             envs.env.VoidCheck=Mesh_Transform(opts.PR2_EX,opts.PR2_EY,opts.Main_EX,opts.Main_EY,envs.env_primer2.VoidCheck)
             if opts.From_App:
                 del agent_primer2
-            #Removed_Num=Mesh_Triming(env_primer,PR_EX,PR_EY)
+            Removed_Num=Mesh_Triming(env_primer,PR_EX,PR_EY)
             #Uncomment the above line if you want to incorporate mesh trimming
 
             observation[:,:,0]=np.reshape(FEASolve(envs.env.VoidCheck,opts.Lx,opts.Ly,opts.Main_EX,opts.Main_EY,envs.env.LC_Nodes,envs.env.Load_Directions,envs.env.BC_Nodes,Stress=True)[3],(opts.Main_EX,opts.Main_EY))
@@ -119,7 +119,7 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
                 activations = get_activations(agent.q_eval.model, observation.reshape(-1,opts.Main_EX,opts.Main_EY,3))
                 display_activations(activations, save=False)
             action = agent.choose_action(observation,opts.Load_Checkpoints,Testing)
-            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=2,PR=False)
+            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=1,PR=False)
             if not opts.Load_Checkpoints:
                 observation_v_,observation_h_,observation_vh_=obs_flip(observation_,opts.Main_EX,opts.Main_EY)
                 action_v,action_h,action_vh=action_flip(action,opts.Main_EX,opts.Main_EY)
