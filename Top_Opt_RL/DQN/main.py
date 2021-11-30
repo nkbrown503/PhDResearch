@@ -119,7 +119,7 @@ def TopOpt_Designing(User_Conditions,opts, envs,my_call_back_functions):
                 activations = get_activations(agent.q_eval.model, observation.reshape(-1,opts.Main_EX,opts.Main_EY,3))
                 display_activations(activations, save=False)
             action = agent.choose_action(observation,opts.Load_Checkpoints,Testing)
-            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=2,PR=False)
+            observation_, reward, done, It= envs.env.step(action,observation,Last_Reward,opts.Load_Checkpoints,envs.env,FEA_Skip=1,PR=False)
             if not opts.Load_Checkpoints:
                 observation_v_,observation_h_,observation_vh_=obs_flip(observation_,opts.Main_EX,opts.Main_EY)
                 action_v,action_h,action_vh=action_flip(action,opts.Main_EX,opts.Main_EY)
