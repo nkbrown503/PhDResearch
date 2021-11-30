@@ -66,6 +66,7 @@ class TopOpt_Gen(Env):
                     reward2=self.RV[int(1-(np.reshape(self.Stress_state,(self.EX*self.EY,1))[action])*1000)-1]
                     reward=np.mean([reward,reward2])
             if self.Counter==1 or (self.Counter/FEA_Skip)==int(self.Counter/FEA_Skip):
+                print('FEA Called')
                 self.Stress_state=Run_Results[3]
                 self.Stress_state=np.reshape(self.Stress_state,(self.EX,self.EY))
             self.state=np.zeros((self.EX,self.EY,3))
