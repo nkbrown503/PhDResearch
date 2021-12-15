@@ -1,4 +1,5 @@
-#3D UnitCell Designer
+# 3D UnitCell Designer
+## Created by Nathan Brown as part of his PhD Research at Clemson University
 
 This code was built to randomly generate 3D unit-cells using cubic bezier curves
 as the fundamental building tool. The code allows for the opportunity to mirror the designed 
