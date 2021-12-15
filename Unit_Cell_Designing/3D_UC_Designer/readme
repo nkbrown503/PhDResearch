@@ -1,0 +1,4 @@
+This code was built to randomly generate 3D unit-cells using cubic bezier curves
+as the fundamental building tool. The code allows for the opportunity to mirror the designed 
+unitcell to promote symmetry. The code will also allow a user to tesselate the unit-cell to produce
+a lattice structure. Finally, the result of the design will be saved as a numpy file in a 'Design_Files' folder.'''
