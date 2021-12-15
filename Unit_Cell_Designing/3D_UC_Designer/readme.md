@@ -35,7 +35,7 @@ Type         |         'Corner' or 'Surface       | 'Surface' will use the entir
                                                     in the bottom surface will be used as the start point and a random point on the 
                                                      top surface will be used as the ending point of the curve. 
     
-                                                    ![image](https://user-images.githubusercontent.com/62954304/146243368-e2235a12-2873-4fdd-b33e-4e8a04152a01.png)
+                                                    ![alt text](https://user-images.githubusercontent.com/62954304/146243368-e2235a12-2873-4fdd-b33e-4e8a04152a01.png)
 
     
     
@@ -47,7 +47,7 @@ Type         |         'Corner' or 'Surface       | 'Surface' will use the entir
                                                      
                                                      
                                                      
-                                                     ![image](https://user-images.githubusercontent.com/62954304/146243315-9c774d32-b168-45b8-8f2b-20fdb76fcec8.png)
+                                                     ![alt text](https://user-images.githubusercontent.com/62954304/146243315-9c774d32-b168-45b8-8f2b-20fdb76fcec8.png)
 
                                                      
                                                      
