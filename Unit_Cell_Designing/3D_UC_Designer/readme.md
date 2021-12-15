@@ -35,11 +35,23 @@ Type         |         'Corner' or 'Surface       | 'Surface' will use the entir
                                                     in the bottom surface will be used as the start point and a random point on the 
                                                      top surface will be used as the ending point of the curve. 
     
+                                                    ![image](https://user-images.githubusercontent.com/62954304/146243368-e2235a12-2873-4fdd-b33e-4e8a04152a01.png)
+
+    
     
                                                     'Corner' will use the 8 cubic corners as potential starting and ending points for the 
                                                      Bezier curve. The unit-cell build will not terminate until each corner has been used
                                                      as a start or ending point at least once. This ensures that the build delivers a practical and 
                                                      feasible unit-cell solutions.
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     ![image](https://user-images.githubusercontent.com/62954304/146243315-9c774d32-b168-45b8-8f2b-20fdb76fcec8.png)
+
+                                                     
+                                                     
+                                                     
                                                      
 Print_UC     |               True                |   Do you want to print a visual representation of the unitcell? This is represented as a scatter plot and can be changed to an                                                       alternative method
 
