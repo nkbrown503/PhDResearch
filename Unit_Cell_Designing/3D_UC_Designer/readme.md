@@ -46,7 +46,7 @@ Print_UC     |               True                |   Do you want to print a visu
 
 Save         |               True                |    Do you want to save the design as a numpy file to use in exterior applications?
 
-Tesselate    |                False              |   Do you want to tesselate the original unit-cell in the X, Y, and Z directions according to UX,UY, and UZ?
+Tesselate    |               False               |   Do you want to tesselate the original unit-cell in the X, Y, and Z directions according to UX,UY, and UZ?
 </pre>
 
 
