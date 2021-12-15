@@ -30,7 +30,7 @@ Iterations   |               1                    | How many unique unitcells de
 
 Mirror       |              True                  |  Will the original design be mirrored about the X, Y, and Z axes. Mirror must be True to Tesselate
 
-Type         |         'Corner' or 'Edge'         | 'Surface' will use the entire top and bottom 
+Type         |         'Corner' or 'Surface       | 'Surface' will use the entire top and bottom 
                                                     surfaces as potential starting and ending points for the bezier curve. A random point
                                                     in the bottom surface will be used as the start point and a random point on the 
                                                      top surface will be used as the ending point of the curve. 
