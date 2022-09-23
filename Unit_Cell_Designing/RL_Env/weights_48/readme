@@ -1,0 +1,1 @@
+#This folder includes the actor and critic weights for the RL agent for both compression and tension. Upon training the agent, these weights will be saved over.
